@@ -1,44 +1,115 @@
 <?php
 session_start();
 
-/* Proje URL kökün (tarayıcıdaki yol) */
 $BASE = '/is-ortaklar-paneli/';
 
-/* Zaten girişliyse role göre paneline gönder */
-if (isset($_SESSION['role'])) {
-  header('Location: ' . ($_SESSION['role'] === 'admin' ? $BASE.'admin/anasayfa.php' : $BASE.'bayi/bayi.php'));
+if (isset($_SESSION['user']['role'])) {
+  $role = $_SESSION['user']['role'];
+  header('Location: ' . ($role === 'admin' ? $BASE.'admin/anasayfa.php' : $BASE.'bayi/bayi.php'));
   exit;
 }
 
 $error = null;
 
+
+/** Basit API istemcisi */
+function api_login(string $email, string $password): array {
+  $url = 'http://34.44.194.247:3000/api/auth/login'; // gerekirse https yap
+  $payload = json_encode([
+    'email'    => $email,
+    'password' => $password,
+  ], JSON_UNESCAPED_UNICODE);
+
+  $ch = curl_init($url);
+  curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST           => true,
+    CURLOPT_HTTPHEADER     => [
+      'Content-Type: application/json',
+      'Accept: application/json',
+    ],
+    CURLOPT_POSTFIELDS     => $payload,
+    CURLOPT_TIMEOUT        => 20,
+  ]);
+
+  $raw    = curl_exec($ch);
+  $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+  $err    = curl_error($ch);
+  curl_close($ch);
+
+  if ($raw === false) {
+    throw new RuntimeException('Sunucuya ulaşılamadı: '.$err);
+  }
+
+  $json = json_decode($raw, true);
+  if ($json === null && json_last_error() !== JSON_ERROR_NONE) {
+    throw new RuntimeException('Geçersiz yanıt: '.$raw);
+  }
+
+  if ($status < 200 || $status >= 300) {
+    $msg = $json['message'] ?? $json['error'] ?? ('Giriş başarısız (HTTP '.$status.')');
+    // Alan bazlı hatalar varsa ilkini ekleyelim
+    if (!empty($json['errors']) && is_array($json['errors'])) {
+      foreach ($json['errors'] as $k => $arr) {
+        if (!empty($arr[0])) { $msg .= ' - '.$arr[0]; break; }
+      }
+    }
+    throw new RuntimeException($msg);
+  }
+
+  return $json;
+}
+
 /* Form POST geldiyse kontrol et */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $email    = trim($_POST['email'] ?? '');
-  $password = $_POST['password'] ?? '';
-  $userType = $_POST['user_type'] ?? 'admin'; // admin | bayi
-  $mfa      = trim($_POST['mfa'] ?? '');
+  $password = (string)($_POST['password'] ?? '');
+  $userType = $_POST['user_type'] ?? null; // UI'dan geliyor ama API bunu istemiyor
+  $mfa      = trim($_POST['mfa'] ?? '');   // Şimdilik API istemiyor
 
-  // DEMO kullanıcıları (ileride DB ile değiştirirsin)
-  $demoUsers = [
-    'admin' => ['email' => 'admin@demo.com', 'password' => '123456'],
-    'bayi'  => ['email' => 'bayi@demo.com',  'password' => '123456'],
-  ];
-
-  $ok = (
-    ($userType === 'admin' && $email === $demoUsers['admin']['email'] && $password === $demoUsers['admin']['password']) ||
-    ($userType === 'bayi'  && $email === $demoUsers['bayi']['email']  && $password === $demoUsers['bayi']['password'])
-  );
-
-  if ($ok) {
-    $_SESSION['email'] = $email;
-    $_SESSION['role']  = $userType;
-    header('Location: ' . ($userType === 'admin' ? $BASE.'admin/anasayfa.php' : $BASE.'bayi/bayi.php'));
-    exit;
+  if ($email === '' || $password === '') {
+    $error = 'E-posta ve şifre zorunludur.';
   } else {
-    $error = 'E-posta/şifre veya giriş tipi hatalı.';
+    try {
+        $resp = api_login($email, $password);
+
+        // API rolü -> proje içi rol eşleme
+        $apiRole = $resp['user']['role'] ?? 'partner_user';
+        $normalizedRole = ($apiRole === 'admin') ? 'admin' : 'bayi';
+
+        // Oturumu doldur
+        $_SESSION['accessToken']      = $resp['accessToken']      ?? null;
+        $_SESSION['refreshToken']     = $resp['refreshToken']     ?? null;
+        $_SESSION['sessionId']        = $resp['sessionId']        ?? null;
+        $_SESSION['refreshExpiresAt'] = $resp['refreshExpiresAt'] ?? null;
+
+        $_SESSION['user'] = [
+            'id'         => $resp['user']['id']         ?? null,
+            'email'      => $resp['user']['email']      ?? $email,
+            'role'       => $normalizedRole, // normalize edilmiş rol
+            'partner_id' => $resp['user']['partner_id'] ?? null,
+            'is_active'  => $resp['user']['is_active']  ?? null,
+        ];
+
+        // Eski kodlarla uyumluluk (varsa)
+        $_SESSION['email'] = $_SESSION['user']['email'];
+        $_SESSION['role']  = $_SESSION['user']['role'];
+
+        // Güvenlik: yeni oturum kimliği
+        session_regenerate_id(true);
+
+        // Role göre panel
+        header('Location: ' . ($normalizedRole === 'admin' ? $BASE.'admin/anasayfa.php' : $BASE.'bayi/bayi.php'));
+        exit;
+
+    } catch (Throwable $ex) {
+        $error = $ex->getMessage() ?: 'Giriş başarısız.';
+    }
+
   }
 }
+
+
 ?>
 <!DOCTYPE html>
 <html lang="tr">

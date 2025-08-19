@@ -1,8 +1,9 @@
 <?php
 session_start();
-$BASE = '/is-ortaklar-paneli/';
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'bayi') { header('Location: '.$BASE.'login.php'); exit; }
-?><h1>Bayi Panel</h1><p><?= htmlspecialchars($_SESSION['email']??'') ?></p>
+if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'bayi') {
+  header('Location: /is-ortaklar-paneli/login.php'); exit;
+}
+ ?></p>
 
 <!DOCTYPE html>
 <html lang="tr">
