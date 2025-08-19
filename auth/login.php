@@ -300,341 +300,370 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </div>
 
   <script>
-    let selectedUserType = 'admin';
-    let selectedRegisterType = 'sirket';
+  let selectedUserType = 'admin';
+  let selectedRegisterType = 'sirket';
 
-    // Tab değiştirme
-    document.getElementById('loginTab').addEventListener('click', showLoginForm);
-    document.getElementById('registerTab').addEventListener('click', showRegisterForm);
+  // Tab değiştirme
+  document.getElementById('loginTab').addEventListener('click', showLoginForm);
+  document.getElementById('registerTab').addEventListener('click', showRegisterForm);
 
-    function showLoginForm() {
-      document.getElementById('loginForm').classList.remove('hidden');
-      document.getElementById('registerForm').classList.add('hidden');
-      document.getElementById('loginTab').classList.add('bg-white','shadow-sm','text-blue-600');
-      document.getElementById('loginTab').classList.remove('text-gray-600');
-      document.getElementById('registerTab').classList.remove('bg-white','shadow-sm','text-blue-600');
-      document.getElementById('registerTab').classList.add('text-gray-600');
-    }
-    function showRegisterForm() {
-      document.getElementById('registerForm').classList.remove('hidden');
-      document.getElementById('loginForm').classList.add('hidden');
-      document.getElementById('registerTab').classList.add('bg-white','shadow-sm','text-blue-600');
-      document.getElementById('registerTab').classList.remove('text-gray-600');
-      document.getElementById('loginTab').classList.remove('bg-white','shadow-sm','text-blue-600');
-      document.getElementById('loginTab').classList.add('text-gray-600');
-    }
+  function showLoginForm() {
+    document.getElementById('loginForm').classList.remove('hidden');
+    document.getElementById('registerForm').classList.add('hidden');
+    document.getElementById('loginTab').classList.add('bg-white','shadow-sm','text-blue-600');
+    document.getElementById('loginTab').classList.remove('text-gray-600');
+    document.getElementById('registerTab').classList.remove('bg-white','shadow-sm','text-blue-600');
+    document.getElementById('registerTab').classList.add('text-gray-600');
+  }
+  function showRegisterForm() {
+    document.getElementById('registerForm').classList.remove('hidden');
+    document.getElementById('loginForm').classList.add('hidden');
+    document.getElementById('registerTab').classList.add('bg-white','shadow-sm','text-blue-600');
+    document.getElementById('registerTab').classList.remove('text-gray-600');
+    document.getElementById('loginTab').classList.remove('bg-white','shadow-sm','text-blue-600');
+    document.getElementById('loginTab').classList.add('text-gray-600');
+  }
 
-    // Kullanıcı tipi seçimi (gizli inputu güncelle)
-    document.querySelectorAll('.user-type-btn').forEach(btn => {
-      btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        selectedUserType = this.dataset.type;
-        const hidden = document.getElementById('userTypeInput');
-        if (hidden) hidden.value = selectedUserType;
+  // Kullanıcı tipi seçimi
+  document.querySelectorAll('.user-type-btn').forEach(btn => {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      selectedUserType = this.dataset.type;
+      const hidden = document.getElementById('userTypeInput');
+      if (hidden) hidden.value = selectedUserType;
 
-        document.querySelectorAll('.user-type-btn').forEach(b => {
-          b.classList.remove('bg-blue-50','text-blue-600','border-blue-200');
-          b.classList.add('bg-gray-50','text-gray-600','border-gray-200');
-        });
-        this.classList.add('bg-blue-50','text-blue-600','border-blue-200');
-        this.classList.remove('bg-gray-50','text-gray-600','border-gray-200');
+      document.querySelectorAll('.user-type-btn').forEach(b => {
+        b.classList.remove('bg-blue-50','text-blue-600','border-blue-200');
+        b.classList.add('bg-gray-50','text-gray-600','border-gray-200');
       });
+      this.classList.add('bg-blue-50','text-blue-600','border-blue-200');
+      this.classList.remove('bg-gray-50','text-gray-600','border-gray-200');
     });
+  });
 
-    // Kayıt tipi seçimi (görsel kısım)
-    document.querySelectorAll('.register-type-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        selectedRegisterType = this.dataset.type;
-        document.querySelectorAll('.register-type-btn').forEach(b => {
-          b.classList.remove('bg-blue-50','text-blue-600','border-blue-200');
-          b.classList.add('bg-gray-50','text-gray-600','border-gray-200');
-        });
-        this.classList.add('bg-blue-50','text-blue-600','border-blue-200');
-        this.classList.remove('bg-gray-50','text-gray-600','border-gray-200');
-
-        if (selectedRegisterType === 'sirket') {
-          document.getElementById('companyFields')?.classList.remove('hidden');
-          document.getElementById('personalFields')?.classList.add('hidden');
-        } else {
-          document.getElementById('companyFields')?.classList.add('hidden');
-          document.getElementById('personalFields')?.classList.remove('hidden');
-        }
+  // Kayıt tipi seçimi
+  document.querySelectorAll('.register-type-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      selectedRegisterType = this.dataset.type;
+      document.querySelectorAll('.register-type-btn').forEach(b => {
+        b.classList.remove('bg-blue-50','text-blue-600','border-blue-200');
+        b.classList.add('bg-gray-50','text-gray-600','border-gray-200');
       });
-    });
-
-    // Şifre görünürlüğü
-    function togglePassword(inputId) {
-      const input = document.getElementById(inputId);
-      const button = input.nextElementSibling;
-      const icon = button.querySelector('svg');
-      if (input.type === 'password') {
-        input.type = 'text';
-        icon.innerHTML = `
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>`;
-      } else {
-        input.type = 'password';
-        icon.innerHTML = `
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>`;
-      }
-    }
-
-    // MFA toggle
-    function toggleMFA() {
-      const mfaSection = document.getElementById('mfaSection');
-      const checkbox = document.getElementById('enableMFA');
-      if (checkbox.checked) mfaSection.classList.remove('hidden'); else mfaSection.classList.add('hidden');
-    }
-
-    // Hata yardımcıları
-    function clearError(fieldId) {
-      const errorDiv = document.getElementById(fieldId + '-error');
-      const inputField = document.getElementById(fieldId);
-      if (errorDiv) errorDiv.classList.add('hidden');
-      if (inputField) {
-        inputField.classList.remove('border-red-500','bg-red-50');
-        inputField.classList.add('border-gray-200','bg-gray-50');
-      }
-    }
-    function showError(fieldId, message='Bu alanın doldurulması zorunludur') {
-      const errorDiv = document.getElementById(fieldId + '-error');
-      const inputField = document.getElementById(fieldId);
-      if (errorDiv) { errorDiv.textContent = message; errorDiv.classList.remove('hidden'); }
-      if (inputField) {
-        inputField.classList.add('border-red-500','bg-red-50');
-        inputField.classList.remove('border-gray-200','bg-gray-50');
-      }
-    }
-
-    // Giriş formu doğrulama
-    function validateLoginForm() {
-      let isValid = true;
-      const email = document.getElementById('loginEmail').value.trim();
-      const password = document.getElementById('loginPassword').value;
-      const mfaEnabled = document.getElementById('enableMFA').checked;
-      if (!email) { showError('loginEmail'); isValid = false; }
-      if (!password) { showError('loginPassword'); isValid = false; }
-      if (mfaEnabled) {
-        const mfaCode = document.getElementById('mfaCode').value.trim();
-        if (!mfaCode) { showError('mfaCode'); isValid = false; }
-      }
-      return isValid;
-    }
-
-    // Kayıt formu doğrulama (mevcut)
-    function validateRegisterForm() {
-      let isValid = true;
+      this.classList.add('bg-blue-50','text-blue-600','border-blue-200');
+      this.classList.remove('bg-gray-50','text-gray-600','border-gray-200');
 
       if (selectedRegisterType === 'sirket') {
-        const companyName = document.getElementById('companyName').value.trim();
-        const taxNumber = document.getElementById('taxNumber').value.trim();
-        if (!companyName) { showError('companyName'); isValid = false; }
-        if (!taxNumber) { showError('taxNumber'); isValid = false; }
-        else if (taxNumber.length !== 10 || !/^\d+$/.test(taxNumber)) { showError('taxNumber','Vergi numarası 10 haneli olmalıdır'); isValid = false; }
+        document.getElementById('companyFields')?.classList.remove('hidden');
+        document.getElementById('personalFields')?.classList.add('hidden');
       } else {
-        const firstName = document.getElementById('firstName').value.trim();
-        const lastName  = document.getElementById('lastName').value.trim();
-        const tcNumber  = document.getElementById('tcNumber').value.trim();
-        if (!firstName) { showError('firstName'); isValid = false; }
-        if (!lastName)  { showError('lastName');  isValid = false; }
-        if (!tcNumber)  { showError('tcNumber');  isValid = false; }
-        else if (tcNumber.length !== 11 || !/^\d+$/.test(tcNumber)) { showError('tcNumber','TC Kimlik No 11 haneli olmalıdır'); isValid = false; }
+        document.getElementById('companyFields')?.classList.add('hidden');
+        document.getElementById('personalFields')?.classList.remove('hidden');
       }
+    });
+  });
 
-      const email = document.getElementById('registerEmail').value.trim();
-      const phone = document.getElementById('phone').value.trim();
-      const password = document.getElementById('registerPassword').value;
-      const confirmPassword = document.getElementById('confirmPassword').value;
+  // Şifre görünürlüğü
+  function togglePassword(inputId) {
+    const input = document.getElementById(inputId);
+    const button = input.nextElementSibling;
+    const icon = button.querySelector('svg');
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.innerHTML = `
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>`;
+    } else {
+      input.type = 'password';
+      icon.innerHTML = `
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>`;
+    }
+  }
 
-      if (!email) { showError('registerEmail'); isValid = false; }
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showError('registerEmail','Geçerli bir e-posta adresi girin'); isValid = false; }
+  // MFA toggle
+  function toggleMFA() {
+    const mfaSection = document.getElementById('mfaSection');
+    const checkbox = document.getElementById('enableMFA');
+    if (checkbox.checked) mfaSection.classList.remove('hidden'); else mfaSection.classList.add('hidden');
+  }
 
-      if (!phone) { showError('phone'); isValid = false; }
-      else if (!/^[\+]?[0-9\s\(\)\-]{10,}$/.test(phone)) { showError('phone','Geçerli bir telefon numarası girin'); isValid = false; }
+  // Hata yardımcıları
+  function clearError(fieldId) {
+    const errorDiv = document.getElementById(fieldId + '-error');
+    const inputField = document.getElementById(fieldId);
+    if (errorDiv) errorDiv.classList.add('hidden');
+    if (inputField) {
+      inputField.classList.remove('border-red-500','bg-red-50');
+      inputField.classList.add('border-gray-200','bg-gray-50');
+    }
+  }
+  function showError(fieldId, message='Bu alanın doldurulması zorunludur') {
+    const errorDiv = document.getElementById(fieldId + '-error');
+    const inputField = document.getElementById(fieldId);
+    if (errorDiv) { errorDiv.textContent = message; errorDiv.classList.remove('hidden'); }
+    if (inputField) {
+      inputField.classList.add('border-red-500','bg-red-50');
+      inputField.classList.remove('border-gray-200','bg-gray-50');
+    }
+  }
 
-      if (!password) { showError('registerPassword'); isValid = false; }
-      else if (password.length < 6) { showError('registerPassword','Şifre en az 6 karakter olmalıdır'); isValid = false; }
+  // Giriş formu doğrulama
+  function validateLoginForm() {
+    let isValid = true;
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const mfaEnabled = document.getElementById('enableMFA').checked;
+    if (!email) { showError('loginEmail'); isValid = false; }
+    if (!password) { showError('loginPassword'); isValid = false; }
+    if (mfaEnabled) {
+      const mfaCode = document.getElementById('mfaCode').value.trim();
+      if (!mfaCode) { showError('mfaCode'); isValid = false; }
+    }
+    return isValid;
+  }
 
-      if (!confirmPassword) { showError('confirmPassword'); isValid = false; }
-      if (password && confirmPassword && password !== confirmPassword) { showError('confirmPassword','Şifreler eşleşmiyor'); isValid = false; }
+  // Kayıt formu doğrulama
+  function validateRegisterForm() {
+    let isValid = true;
 
-      const kvkkCheck = document.getElementById('kvkkCheck').checked;
-      const contractCheck = document.getElementById('contractCheck').checked;
-      if (!kvkkCheck) { showError('kvkkCheck','Bu onayın verilmesi zorunludur'); isValid = false; }
-      if (!contractCheck) { showError('contractCheck','Bu onayın verilmesi zorunludur'); isValid = false; }
-
-      return isValid;
+    if (selectedRegisterType === 'sirket') {
+      const companyName = document.getElementById('companyName').value.trim();
+      const taxNumber = document.getElementById('taxNumber').value.trim();
+      if (!companyName) { showError('companyName'); isValid = false; }
+      if (!taxNumber) { showError('taxNumber'); isValid = false; }
+      else if (taxNumber.length !== 10 || !/^\d+$/.test(taxNumber)) { showError('taxNumber','Vergi numarası 10 haneli olmalıdır'); isValid = false; }
+    } else {
+      const firstName = document.getElementById('firstName').value.trim();
+      const lastName  = document.getElementById('lastName').value.trim();
+      const tcNumber  = document.getElementById('tcNumber').value.trim();
+      if (!firstName) { showError('firstName'); isValid = false; }
+      if (!lastName)  { showError('lastName');  isValid = false; }
+      if (!tcNumber)  { showError('tcNumber');  isValid = false; }
+      else if (tcNumber.length !== 11 || !/^\d+$/.test(tcNumber)) { showError('tcNumber','TC Kimlik No 11 haneli olmalıdır'); isValid = false; }
     }
 
-    // -----------------------------
-    //  REGISTER: GERÇEK API ENTEGRASYONU
-    // -----------------------------
+    const email = document.getElementById('registerEmail').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    const password = document.getElementById('registerPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
 
-    // API tabanı: aynı origin ise '' bırak.
-    // Örn. farklı portsa: const API_BASE = 'http://localhost:3001';
-    const API_BASE = 'http://34.44.194.247:3000';
+    if (!email) { showError('registerEmail'); isValid = false; }
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showError('registerEmail','Geçerli bir e-posta adresi girin'); isValid = false; }
 
-    const ENDPOINTS = {
-      company:    API_BASE + '/api/auth/register/company',
-      individual: API_BASE + '/api/auth/register/individual'
-    };
+    if (!phone) { showError('phone'); isValid = false; }
+    else if (!/^[\+]?[0-9\s\(\)\-]{10,}$/.test(phone)) { showError('phone','Geçerli bir telefon numarası girin'); isValid = false; }
 
-    function v(id){ return (document.getElementById(id)?.value || '').trim(); }
-    function checked(id){ return !!document.getElementById(id)?.checked; }
+    if (!password) { showError('registerPassword'); isValid = false; }
+    else if (password.length < 6) { showError('registerPassword','Şifre en az 6 karakter olmalıdır'); isValid = false; }
 
-    function showRegisterError(msg){
-      const box = document.getElementById('registerError');
-      if (!box) { alert(msg); return; }
-      box.textContent = msg;
-      box.classList.remove('hidden');
+    if (!confirmPassword) { showError('confirmPassword'); isValid = false; }
+    if (password && confirmPassword && password !== confirmPassword) { showError('confirmPassword','Şifreler eşleşmiyor'); isValid = false; }
+
+    const kvkkCheck = document.getElementById('kvkkCheck').checked;
+    const contractCheck = document.getElementById('contractCheck').checked;
+    if (!kvkkCheck) { showError('kvkkCheck','Bu onayın verilmesi zorunludur'); isValid = false; }
+    if (!contractCheck) { showError('contractCheck','Bu onayın verilmesi zorunludur'); isValid = false; }
+
+    return isValid;
+  }
+
+  /* =============================
+     REGISTER: GERÇEK API ENTEGRASYONU
+     ============================= */
+
+  // Frontend -> aynı origin proxy (CORS yok)
+  const BASE_PATH = '<?= $BASE ?>'; // örn: '/is-ortaklar-paneli/'
+  const ENDPOINTS = {
+    company:    BASE_PATH + 'api/register-proxy.php?target=company',
+    individual: BASE_PATH + 'api/register-proxy.php?target=individual'
+  };
+
+  // Yardımcılar
+  function v(id){ return (document.getElementById(id)?.value || '').trim(); }
+  function checked(id){ return !!document.getElementById(id)?.checked; }
+
+  function showRegisterError(msg){
+    const box = document.getElementById('registerError');
+    if (!box) { alert(msg); return; }
+    box.innerHTML = msg; // HTML liste gösterebilmek için
+    box.classList.remove('hidden');
+  }
+  function clearRegisterError(){
+    const box = document.getElementById('registerError');
+    if (box) box.classList.add('hidden');
+  }
+
+  async function postJSON(url, data) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    // Hem JSON hem düz metin yanıtları güvenle parse et
+    let raw = '';
+    try { raw = await res.text(); } catch (_) {}
+    let body = null;
+    if (raw) {
+      try { body = JSON.parse(raw); } catch (_) { body = { message: raw }; }
     }
-    function clearRegisterError(){
-      const box = document.getElementById('registerError');
-      if (box) box.classList.add('hidden');
-    }
 
-    async function postJSON(url, data) {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      let body = null;
-      try { body = await res.json(); } catch(e) {}
-      if (!res.ok) {
-        const msg = body?.message || `İstek başarısız (${res.status})`;
-        const err = new Error(msg);
-        err.status = res.status;
-        err.body = body;
-        throw err;
+    if (!res.ok) {
+      const fieldErrors = body && body.errors;
+      const firstFieldError = fieldErrors ? Object.values(fieldErrors).flat()[0] : null;
+
+      const msg =
+        (body && (body.message || body.error)) ||
+        firstFieldError ||
+        `İstek başarısız (${res.status})`;
+
+      const err = new Error(msg);
+      err.status = res.status;
+      err.body = body;
+      throw err;
+    }
+    return body;
+  }
+
+  function applyFieldErrors(errors){
+    if (!errors) return;
+    if (errors.company_title) showError('companyName', errors.company_title[0] || 'Hatalı değer');
+    if (errors.name)          showError('companyName', errors.name[0] || 'Hatalı değer');
+
+    if (errors.tax_no) {
+      if (selectedRegisterType === 'sirket') showError('taxNumber', errors.tax_no[0] || 'Hatalı değer');
+      else                                   showError('tcNumber',  errors.tax_no[0] || 'Hatalı değer');
+    }
+    if (errors.person_first_name) showError('firstName', errors.person_first_name[0] || 'Hatalı değer');
+    if (errors.person_last_name)  showError('lastName',  errors.person_last_name[0]  || 'Hatalı değer');
+
+    if (errors.email)            showError('registerEmail', errors.email[0] || 'Hatalı e-posta');
+    if (errors.phone)            showError('phone', errors.phone[0] || 'Hatalı telefon');
+    if (errors.password)         showError('registerPassword', errors.password[0] || 'Hatalı şifre');
+    if (errors.password_confirm) showError('confirmPassword', errors.password_confirm[0] || 'Eşleşmiyor');
+    if (errors.kvkk_accepted)    showError('kvkkCheck', errors.kvkk_accepted[0] || 'Zorunlu');
+  }
+
+  function summarizeErrors(errors){
+    if (!errors) return '';
+    const lines = [];
+    for (const [k,v] of Object.entries(errors)) {
+      const text = Array.isArray(v) ? v.join(', ') : String(v);
+      lines.push(`• <b>${k}</b>: ${text}`);
+    }
+    return lines.join('<br>');
+  }
+
+  function buildRegisterPayload() {
+    if (selectedRegisterType === 'sirket') {
+      const company = v('companyName');
+      return {
+        company_title: company,
+        name: company,
+        tax_no: v('taxNumber').replace(/\D/g,''),
+        email: v('registerEmail'),
+        phone: v('phone').replace(/\s/g,''),
+        password: v('registerPassword'),
+        password_confirm: v('confirmPassword'),
+        kvkk_accepted: checked('kvkkCheck')
+      };
+    } else {
+      return {
+        person_first_name: v('firstName'),
+        person_last_name:  v('lastName'),
+        tax_no: v('tcNumber').replace(/\D/g,''),
+        email: v('registerEmail'),
+        phone: v('phone').replace(/\s/g,''),
+        password: v('registerPassword'),
+        password_confirm: v('confirmPassword'),
+        kvkk_accepted: checked('kvkkCheck')
+      };
+    }
+  }
+
+  async function handleRegister() {
+    clearRegisterError();
+    if (!validateRegisterForm()) return;
+
+    const btn = document.getElementById('registerBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Gönderiliyor...'; }
+
+    try {
+      const type = (selectedRegisterType === 'sirket') ? 'company' : 'individual';
+      const url  = ENDPOINTS[type];
+      const payload = buildRegisterPayload();
+
+      // console.log('POST ->', url, payload);
+      const data = await postJSON(url, payload); // 201 beklenir
+
+      showWaitingScreen(); // başarılı
+    } catch (err) {
+      let msg = err.message || 'Kayıt sırasında bir hata oluştu.';
+      if (err.body?.errors) {
+        applyFieldErrors(err.body.errors);
+        msg += '<br>' + summarizeErrors(err.body.errors);
       }
-      return body;
-    }
-
-    function applyFieldErrors(errors){
-      if (!errors) return;
-      if (errors.company_title) showError('companyName', errors.company_title[0] || 'Hatalı değer');
-      if (errors.name)          showError('companyName', errors.name[0] || 'Hatalı değer');
-
-      if (errors.tax_no) {
-        if (selectedRegisterType === 'sirket') showError('taxNumber', errors.tax_no[0] || 'Hatalı değer');
-        else                                   showError('tcNumber',  errors.tax_no[0] || 'Hatalı değer');
+      if (err.body?.error && !err.body?.errors) {
+        msg = err.body.error;
       }
-      if (errors.person_first_name) showError('firstName', errors.person_first_name[0] || 'Hatalı değer');
-      if (errors.person_last_name)  showError('lastName',  errors.person_last_name[0]  || 'Hatalı değer');
-
-      if (errors.email)            showError('registerEmail', errors.email[0] || 'Hatalı e-posta');
-      if (errors.phone)            showError('phone', errors.phone[0] || 'Hatalı telefon');
-      if (errors.password)         showError('registerPassword', errors.password[0] || 'Hatalı şifre');
-      if (errors.password_confirm) showError('confirmPassword', errors.password_confirm[0] || 'Eşleşmiyor');
-      if (errors.kvkk_accepted)    showError('kvkkCheck', errors.kvkk_accepted[0] || 'Zorunlu');
+      showRegisterError(msg);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Kayıt Ol'; }
     }
+  }
 
-    function buildRegisterPayload() {
-      if (selectedRegisterType === 'sirket') {
-        const company = v('companyName');
-        return {
-          company_title: company,
-          name: company, // company_title yoksa fallback
-          tax_no: v('taxNumber'), // VKN
-          email: v('registerEmail'),
-          phone: v('phone'),
-          password: v('registerPassword'),
-          password_confirm: v('confirmPassword'),
-          kvkk_accepted: checked('kvkkCheck')
-        };
-      } else {
-        return {
-          person_first_name: v('firstName'),
-          person_last_name:  v('lastName'),
-          tax_no: v('tcNumber'), // TCKN
-          email: v('registerEmail'),
-          phone: v('phone'),
-          password: v('registerPassword'),
-          password_confirm: v('confirmPassword'),
-          kvkk_accepted: checked('kvkkCheck')
-        };
-      }
-    }
+  // Modal/helperlar (kayıt ekranı sonrası vs.)
+  function showForgotPassword() {
+    const email = prompt('Şifre sıfırlama bağlantısının gönderileceği e-posta adresinizi girin:');
+    if (email) alert(`Şifre sıfırlama bağlantısı ${email} adresine gönderildi! (Demo)`);
+  }
+  function showKVKK() {
+    document.getElementById('modalTitle').textContent = 'KVKK Aydınlatma Metni';
+    document.getElementById('modalContent').innerHTML = `
+      <p class="mb-3"><strong>Kişisel Verilerin Korunması Hakkında Bilgilendirme</strong></p>
+      <p class="mb-2">6698 sayılı KVKK uyarınca, kişisel verileriniz ...</p>`;
+    document.getElementById('modalOverlay').classList.remove('hidden');
+    document.getElementById('modalOverlay').classList.add('flex');
+  }
+  function showContract() {
+    document.getElementById('modalTitle').textContent = 'Kullanım Sözleşmesi';
+    document.getElementById('modalContent').innerHTML = `
+      <p class="mb-3"><strong>Hizmet Kullanım Şartları</strong></p>
+      <p class="mb-2">Bu sözleşme ...</p>`;
+    document.getElementById('modalOverlay').classList.remove('hidden');
+    document.getElementById('modalOverlay').classList.add('flex');
+  }
+  function showWaitingScreen() {
+    document.getElementById('modalTitle').textContent = 'Kayıt Başarılı!';
+    document.getElementById('modalContent').innerHTML = `<p>Kaydınız alınmıştır. Yönetici onayından sonra giriş yapabilirsiniz.</p>`;
+    const modalOverlay = document.getElementById('modalOverlay');
+    const closeButton = modalOverlay.querySelector('button');
+    closeButton.textContent = 'Tamam';
+    closeButton.onclick = function(){ closeModal(); showLoginForm(); clearAllForms(); };
+    modalOverlay.classList.remove('hidden'); modalOverlay.classList.add('flex');
+  }
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.add('hidden');
+    document.getElementById('modalOverlay').classList.remove('flex');
+  }
+  document.getElementById('modalOverlay').addEventListener('click', function(e){ if (e.target === this) closeModal(); });
 
-    async function handleRegister() {
-      clearRegisterError();
-      if (!validateRegisterForm()) return;
-
-      const btn = document.getElementById('registerBtn');
-      if (btn) { btn.disabled = true; btn.textContent = 'Gönderiliyor...'; }
-
-      try {
-        const type = (selectedRegisterType === 'sirket') ? 'company' : 'individual';
-        const url  = ENDPOINTS[type];
-        const payload = buildRegisterPayload();
-
-        const data = await postJSON(url, payload); // 201 beklenir
-
-        // Başarılı => mevcut modal + login'e dönüş
-        showWaitingScreen();
-        // console.log('Register success', data);
-
-      } catch (err) {
-        showRegisterError(err.message || 'Kayıt sırasında bir hata oluştu.');
-        if (err.body && err.body.errors) applyFieldErrors(err.body.errors);
-      } finally {
-        if (btn) { btn.disabled = false; btn.textContent = 'Kayıt Ol'; }
-      }
-    }
-    // -----------------------------
-
-    // Modal helperları
-    function showForgotPassword() {
-      const email = prompt('Şifre sıfırlama bağlantısının gönderileceği e-posta adresinizi girin:');
-      if (email) alert(`Şifre sıfırlama bağlantısı ${email} adresine gönderildi! (Demo)`);
-    }
-    function showKVKK() {
-      document.getElementById('modalTitle').textContent = 'KVKK Aydınlatma Metni';
-      document.getElementById('modalContent').innerHTML = `
-        <p class="mb-3"><strong>Kişisel Verilerin Korunması Hakkında Bilgilendirme</strong></p>
-        <p class="mb-2">6698 sayılı KVKK uyarınca, kişisel verileriniz ...</p>`;
-      document.getElementById('modalOverlay').classList.remove('hidden'); document.getElementById('modalOverlay').classList.add('flex');
-    }
-    function showContract() {
-      document.getElementById('modalTitle').textContent = 'Kullanım Sözleşmesi';
-      document.getElementById('modalContent').innerHTML = `
-        <p class="mb-3"><strong>Hizmet Kullanım Şartları</strong></p>
-        <p class="mb-2">Bu sözleşme ...</p>`;
-      document.getElementById('modalOverlay').classList.remove('hidden'); document.getElementById('modalOverlay').classList.add('flex');
-    }
-    function showWaitingScreen() {
-      document.getElementById('modalTitle').textContent = 'Kayıt Başarılı!';
-      document.getElementById('modalContent').innerHTML = `<p>Kaydınız alınmıştır. Onay sonrası bilgilendirileceksiniz.</p>`;
-      const modalOverlay = document.getElementById('modalOverlay');
-      const closeButton = modalOverlay.querySelector('button');
-      closeButton.textContent = 'Tamam';
-      closeButton.onclick = function(){ closeModal(); showLoginForm(); clearAllForms(); };
-      modalOverlay.classList.remove('hidden'); modalOverlay.classList.add('flex');
-    }
-    function closeModal() {
-      document.getElementById('modalOverlay').classList.add('hidden');
-      document.getElementById('modalOverlay').classList.remove('flex');
-    }
-    document.getElementById('modalOverlay').addEventListener('click', function(e){ if (e.target === this) closeModal(); });
-
-    function clearAllForms() {
-      // Giriş formu
-      document.getElementById('loginEmail').value = '';
-      document.getElementById('loginPassword').value = '';
-      document.getElementById('mfaCode').value = '';
-      // Kayıt formu
-      const registerInputs = document.querySelectorAll('#registerForm input[type="text"], #registerForm input[type="email"], #registerForm input[type="tel"], #registerForm input[type="password"]');
-      registerInputs.forEach(input => input.value = '');
-      const checkboxes = document.querySelectorAll('#registerForm input[type="checkbox"]');
-      checkboxes.forEach(checkbox => checkbox.checked = false);
-      // Hata mesajlarını temizle
-      const errorDivs = document.querySelectorAll('[id$="-error"]'); errorDivs.forEach(d => d.classList.add('hidden'));
-      // Input stillerini sıfırla
-      const allInputs = document.querySelectorAll('input'); allInputs.forEach(i => { i.classList.remove('border-red-500','bg-red-50'); i.classList.add('border-gray-200','bg-gray-50'); });
-      // Genel kayıt hata kutusu
-      clearRegisterError();
-    }
-  </script>
+  function clearAllForms() {
+    // Giriş formu
+    document.getElementById('loginEmail').value = '';
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('mfaCode').value = '';
+    // Kayıt formu
+    const registerInputs = document.querySelectorAll('#registerForm input[type="text"], #registerForm input[type="email"], #registerForm input[type="tel"], #registerForm input[type="password"]');
+    registerInputs.forEach(input => input.value = '');
+    const checkboxes = document.querySelectorAll('#registerForm input[type="checkbox"]');
+    checkboxes.forEach(checkbox => checkbox.checked = false);
+    // Hata mesajlarını temizle
+    const errorDivs = document.querySelectorAll('[id$="-error"]'); errorDivs.forEach(d => d.classList.add('hidden'));
+    // Input stillerini sıfırla
+    const allInputs = document.querySelectorAll('input'); allInputs.forEach(i => { i.classList.remove('border-red-500','bg-red-50'); i.classList.add('border-gray-200','bg-gray-50'); });
+    // Genel kayıt hata kutusu
+    clearRegisterError();
+  }
+</script>
 </body>
 </html>
