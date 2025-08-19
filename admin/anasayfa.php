@@ -1,3 +1,13 @@
+<?php
+session_start();
+$BASE = '/is-ortaklar-paneli/';
+
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+    header('Location: '.$BASE.'login.php');
+    exit;
+}
+?>
+
 <!DOCTYPE html>
 <html lang="tr">
 <head>
