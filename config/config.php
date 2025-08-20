@@ -4,7 +4,9 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 /** UYGULAMA URL KÖKÜ (web root'un public/ ise aşağıdaki iyi) */
-define('BASE', '/is-ortaklar-paneli/public/');
+// config/config.php
+define('BASE', '/is-ortaklar-paneli/');  // <-- /public yok
+
 
 /** DIŞ API AYARLARI */
 define('API_BASE', 'http://34.44.194.247:3000'); // gerekirse https yap
@@ -15,6 +17,10 @@ const ROLE_TO_ROUTE = [
   'partner_user'  => 'bayi/bayi.php',
   // gerekirse 'dealer', 'super_admin' vb. ekle
 ];
+
+/** Basit yardımcılar */
+function asset_url(string $path): string { return BASE . 'assets/' . ltrim($path, '/'); }
+function url(string $path): string { return BASE . ltrim($path, '/'); }
 
 /** Küçük yardımcılar */
 function e($str){ return htmlspecialchars($str ?? '', ENT_QUOTES, 'UTF-8'); }

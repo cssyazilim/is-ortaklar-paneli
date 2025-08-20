@@ -1,0 +1,8 @@
+.input-focus:focus { box-shadow: 0 0 0 3px rgba(59,130,246,.1); }
+.card-shadow { box-shadow: 0 20px 25px -5px rgba(0,0,0,.1), 0 10px 10px -5px rgba(0,0,0,.04); }
+
+html.no-scroll,
+body.no-scroll {
+  overflow: hidden !important;
+  height: 100%;
+}

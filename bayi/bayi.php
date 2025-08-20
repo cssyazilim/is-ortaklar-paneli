@@ -578,11 +578,7 @@ if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'bayi') {
 
         // Logout functionality
         function logout() {
-            if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
-                alert('Başarıyla çıkış yapıldı. Giriş sayfasına yönlendiriliyorsunuz...');
-                // Here you would normally redirect to login page
-                // window.location.href = '/login';
-            }
+            window.location.href = '/is-ortaklar-paneli/auth/logout.php';
         }
 
         // Close user menu when clicking outside
