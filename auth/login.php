@@ -64,8 +64,8 @@ function api_login(string $email, string $password): array {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $email    = trim($_POST['email'] ?? '');
   $password = (string)($_POST['password'] ?? '');
-  $userType = $_POST['user_type'] ?? null; // UI'dan geliyor ama API bunu istemiyor
-  $mfa      = trim($_POST['mfa'] ?? '');   // Şimdilik API istemiyor
+  $userType = $_POST['user_type'] ?? null; // admin | bayi
+  $mfa      = trim($_POST['mfa'] ?? '');
 
   if ($email === '' || $password === '') {
     $error = 'E-posta ve şifre zorunludur.';
@@ -77,7 +77,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $apiRole = $resp['user']['role'] ?? 'partner_user';
         $normalizedRole = ($apiRole === 'admin') ? 'admin' : 'bayi';
 
-        // Oturumu doldur
+        // *** BURASI KRİTİK ***
+        // Kullanıcının seçtiği sekme ile API'den gelen rol eşleşmeli
+        if ($normalizedRole !== $userType) {
+            throw new RuntimeException(
+                $normalizedRole === 'admin'
+                  ? 'Bu hesap ADMIN rolündedir. Admin sekmesinden giriş yapmalısınız.'
+                  : 'Bu hesap BAYİ rolündedir. Bayi sekmesinden giriş yapmalısınız.'
+            );
+        }
+
+        // Oturum set et
         $_SESSION['accessToken']      = $resp['accessToken']      ?? null;
         $_SESSION['refreshToken']     = $resp['refreshToken']     ?? null;
         $_SESSION['sessionId']        = $resp['sessionId']        ?? null;
@@ -86,26 +96,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user'] = [
             'id'         => $resp['user']['id']         ?? null,
             'email'      => $resp['user']['email']      ?? $email,
-            'role'       => $normalizedRole, // normalize edilmiş rol
+            'role'       => $normalizedRole,
             'partner_id' => $resp['user']['partner_id'] ?? null,
             'is_active'  => $resp['user']['is_active']  ?? null,
         ];
 
-        // Eski kodlarla uyumluluk (varsa)
         $_SESSION['email'] = $_SESSION['user']['email'];
         $_SESSION['role']  = $_SESSION['user']['role'];
 
-        // Güvenlik: yeni oturum kimliği
         session_regenerate_id(true);
 
-        // Role göre panel
+        // Doğru sekmeden girilmişse yönlendir
         header('Location: ' . ($normalizedRole === 'admin' ? $BASE.'admin/anasayfa.php' : $BASE.'bayi/bayi.php'));
         exit;
 
     } catch (Throwable $ex) {
         $error = $ex->getMessage() ?: 'Giriş başarısız.';
     }
-
   }
 }
 
@@ -173,32 +180,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <!-- Şifre -->
-        <div>
-          <label class="block text-gray-700 text-sm font-medium mb-2">Şifre</label>
-          <div class="relative">
-            <input type="password" id="loginPassword" name="password" required
-              class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-500 input-focus focus:border-blue-500 focus:bg-white focus:outline-none transition-all duration-200 pr-12 text-sm sm:text-base"
-              placeholder="••••••••" oninput="clearError('loginPassword')">
-            <button type="button" onclick="togglePassword('loginPassword')"
-              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-              </svg>
-            </button>
-          </div>
-          <div id="loginPassword-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
-        </div>
-
-        <!-- MFA Kodu -->
-        <div id="mfaSection" class="hidden">
-          <label class="block text-gray-700 text-sm font-medium mb-2">2FA Doğrulama Kodu</label>
-          <input type="text" id="mfaCode" name="mfa"
-            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-500 input-focus focus:border-blue-500 focus:bg-white focus:outline-none transition-all duration-200 text-sm sm:text-base"
-            placeholder="6 haneli kod" oninput="clearError('mfaCode')">
-          <div id="mfaCode-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
-        </div>
-
+      <div class="relative">
+          <input type="password" id="loginPassword" name="password" required
+            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-500 input-focus focus:border-blue-500 focus:bg-white focus:outline-none transition-all duration-200 pr-12 text-sm sm:text-base"
+            placeholder="••••••••" oninput="clearError('loginPassword')" autocomplete="current-password">
+          <button type="button" onclick="togglePassword('loginPassword')"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Şifre görünürlüğünü değiştir" aria-pressed="false">
+            <!-- Açık göz (şifre GÖRÜNÜRKEN gösterilecek) -->
+            <svg class="w-5 h-5 eye-open hidden pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+            </svg>
+            <!-- Kapalı göz (şifre GİZLİYKEN gösterilecek) -->
+            <svg class="w-5 h-5 eye-closed pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>
+            </svg>
+          </button>
+      </div>
+      
         <!-- Şifremi Unuttum & Beni Hatırla -->
         <div class="flex items-center justify-between">
           <label class="flex items-center">
@@ -208,11 +208,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <button type="button" onclick="showForgotPassword()" class="text-sm text-blue-600 hover:text-blue-800 transition-colors underline">Şifremi Unuttum</button>
         </div>
 
-        <!-- MFA Aktifleştir -->
-        <div class="flex items-center">
-          <input type="checkbox" id="enableMFA" onchange="toggleMFA()" class="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2">
-          <label for="enableMFA" class="ml-2 text-sm text-gray-600">İki Faktörlü Doğrulama (2FA)</label>
-        </div>
 
         <!-- GİZLİ ROLE -->
         <input type="hidden" id="userTypeInput" name="user_type" value="admin">
@@ -286,32 +281,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <div>
-          <label class="block text-gray-700 text-sm font-medium mb-2">Şifre *</label>
-          <div class="relative">
-            <input type="password" id="registerPassword" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-500 input-focus focus:border-blue-500 focus:bg-white focus:outline-none transition-all duration-200 pr-12 text-sm sm:text-base" placeholder="••••••••" oninput="clearError('registerPassword')">
-            <button type="button" onclick="togglePassword('registerPassword')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-              </svg>
-            </button>
-          </div>
-          <div id="registerPassword-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
-        </div>
+  <label class="block text-gray-700 text-sm font-medium mb-2">Şifre *</label>
+  <div class="relative">
+    <input type="password" id="registerPassword"
+      class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900
+             placeholder-gray-500 input-focus focus:border-blue-500 focus:bg-white
+             focus:outline-none transition-all duration-200 pr-12 text-sm sm:text-base"
+      placeholder="••••••••" oninput="clearError('registerPassword')">
+    <button type="button" onclick="togglePassword('registerPassword')"
+      class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+      aria-label="Şifre görünürlüğünü değiştir" aria-pressed="false">
+      <!-- Açık göz -->
+      <svg class="w-5 h-5 eye-open hidden pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943
+             9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+      </svg>
+      <!-- Kapalı göz -->
+      <svg class="w-5 h-5 eye-closed pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7
+             a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243
+             M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>
+      </svg>
+    </button>
+  </div>
+  <div id="registerPassword-error" class="text-red-500 text-xs mt-1 hidden">
+    Bu alanın doldurulması zorunludur
+  </div>
+</div>
 
-        <div>
-          <label class="block text-gray-700 text-sm font-medium mb-2">Şifre Tekrar *</label>
-          <div class="relative">
-            <input type="password" id="confirmPassword" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-500 input-focus focus:border-blue-500 focus:bg-white focus:outline-none transition-all duration-200 pr-12 text-sm sm:text-base" placeholder="••••••••" oninput="clearError('confirmPassword')">
-            <button type="button" onclick="togglePassword('confirmPassword')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9-542-7z"></path>
-              </svg>
-            </button>
-          </div>
-          <div id="confirmPassword-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
-        </div>
+
+   <div>
+  <label class="block text-gray-700 text-sm font-medium mb-2">Şifre Tekrar *</label>
+  <div class="relative">
+    <input type="password" id="confirmPassword"
+      class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900
+             placeholder-gray-500 input-focus focus:border-blue-500 focus:bg-white
+             focus:outline-none transition-all duration-200 pr-12 text-sm sm:text-base"
+      placeholder="••••••••" oninput="clearError('confirmPassword')">
+    <button type="button" onclick="togglePassword('confirmPassword')"
+      class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+      aria-label="Şifre görünürlüğünü değiştir" aria-pressed="false">
+      <!-- Açık göz -->
+      <svg class="w-5 h-5 eye-open hidden pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943
+             9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+      </svg>
+      <!-- Kapalı göz -->
+      <svg class="w-5 h-5 eye-closed pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7
+             a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243
+             M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>
+      </svg>
+    </button>
+  </div>
+  <div id="confirmPassword-error" class="text-red-500 text-xs mt-1 hidden">
+    Bu alanın doldurulması zorunludur
+  </div>
+</div>
+
 
         <!-- Onaylar -->
         <div class="space-y-4 pt-2">
@@ -379,12 +414,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   document.getElementById('registerTab').addEventListener('click', showRegisterForm);
 
   function showLoginForm() {
-    document.getElementById('loginForm').classList.remove('hidden');
-    document.getElementById('registerForm').classList.add('hidden');
     document.getElementById('loginTab').classList.add('bg-white','shadow-sm','text-blue-600');
     document.getElementById('loginTab').classList.remove('text-gray-600');
     document.getElementById('registerTab').classList.remove('bg-white','shadow-sm','text-blue-600');
     document.getElementById('registerTab').classList.add('text-gray-600');
+     document.getElementById('loginForm').classList.remove('hidden');
+    document.getElementById('registerForm').classList.add('hidden');
   }
   function showRegisterForm() {
     document.getElementById('registerForm').classList.remove('hidden');
@@ -433,22 +468,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     });
   });
 
-  // Şifre görünürlüğü
-  function togglePassword(inputId) {
-    const input = document.getElementById(inputId);
-    const button = input.nextElementSibling;
-    const icon = button.querySelector('svg');
-    if (input.type === 'password') {
-      input.type = 'text';
-      icon.innerHTML = `
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>`;
+// Şifre görünürlüğü
+function togglePassword(inputId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const button = input.nextElementSibling;
+  if (!button) return;
+
+  const eyeOpen   = button.querySelector('.eye-open');
+  const eyeClosed = button.querySelector('.eye-closed');
+
+  const show = input.type === 'password'; // şimdi gösterecek miyiz?
+  input.type = show ? 'text' : 'password';
+
+  // ikonları değiştir
+  if (eyeOpen && eyeClosed) {
+    if (show) {
+      eyeOpen.classList.remove('hidden');   // açık göz
+      eyeClosed.classList.add('hidden');    // kapalı göz
     } else {
-      input.type = 'password';
-      icon.innerHTML = `
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>`;
+      eyeOpen.classList.add('hidden');
+      eyeClosed.classList.remove('hidden');
     }
   }
+
+  // erişilebilirlik
+  button.setAttribute('aria-pressed', show ? 'true' : 'false');
+}
 
   // MFA toggle
   function toggleMFA() {

@@ -6,6 +6,12 @@ if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'admin') 
   header('Location: /is-ortaklar-paneli/login.php'); exit;
 }
 
+if (($_SESSION['user']['role'] ?? null) !== 'admin') {
+    http_response_code(403);
+    header('Location: /is-ortaklar-paneli/bayi/bayi.php');
+    exit;
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -589,8 +595,7 @@ if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'admin') 
         // Çıkış yap
         function logout() {
             if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
-                alert('Çıkış yapılıyor... (Demo)');
-                // Gerçek uygulamada login sayfasına yönlendirilecek
+                window.location.href = '/is-ortaklar-paneli/auth/logout.php';
             }
         }
 

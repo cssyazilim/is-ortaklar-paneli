@@ -30,25 +30,37 @@ if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'bayi') {
     <nav class="bg-white shadow-lg border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-indigo-600">Bayi Yönetim Sistemi</h1>
+                <div class="flex items-center h-full">
+                    <div class="flex-shrink-0 flex items-center h-full">
+                        <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-indigo-600 mr-12">Bayi Yönetim Sistemi</h1>
                     </div>
-                    <div class="hidden md:ml-6 md:flex md:space-x-8">
-                        <button onclick="showSection('dashboard')" class="nav-btn text-indigo-600 border-b-2 border-indigo-500 px-1 pt-1 pb-4 text-sm font-medium">Dashboard</button>
-                        <button onclick="showSection('registration')" class="nav-btn text-gray-500 hover:text-gray-700 px-1 pt-1 pb-4 text-sm font-medium">Bayi Kayıt</button>
-                        <button onclick="showSection('quotes')" class="nav-btn text-gray-500 hover:text-gray-700 px-1 pt-1 pb-4 text-sm font-medium">Teklifler</button>
-                        <button onclick="showSection('orders')" class="nav-btn text-gray-500 hover:text-gray-700 px-1 pt-1 pb-4 text-sm font-medium">Siparişler</button>
-                        <button onclick="showSection('billing')" class="nav-btn text-gray-500 hover:text-gray-700 px-1 pt-1 pb-4 text-sm font-medium">Faturalandırma</button>
+                    <div class="hidden md:flex md:space-x-8 md:items-center md:h-full">
+                        <button onclick="showSection('dashboard')" class="nav-btn text-indigo-600 border-b-2 border-indigo-500 px-1 h-full flex items-center text-sm font-medium">Dashboard</button>
+                        <button onclick="showSection('registration')" class="nav-btn text-gray-500 hover:text-gray-700 px-1 h-full flex items-center text-sm font-medium">Bayi Kayıt</button>
+                        <button onclick="showSection('quotes')" class="nav-btn text-gray-500 hover:text-gray-700 px-1 h-full flex items-center text-sm font-medium">Teklifler</button>
+                        <button onclick="showSection('orders')" class="nav-btn text-gray-500 hover:text-gray-700 px-1 h-full flex items-center text-sm font-medium">Siparişler</button>
+                        <button onclick="showSection('billing')" class="nav-btn text-gray-500 hover:text-gray-700 px-1 h-full flex items-center text-sm font-medium">Faturalandırma</button>
                     </div>
                 </div>
-                <div class="flex items-center">
-                    <button class="md:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100" onclick="toggleMobileMenu()">
+                <div class="flex items-center h-full">
+                    <button class="md:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 flex items-center" onclick="toggleMobileMenu()">
                         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </button>
-                    <span class="hidden sm:block text-xs sm:text-sm text-gray-600">Hoş geldiniz, <strong>Ahmet Bayi</strong></span>
+                    <div class="hidden sm:flex sm:items-center relative">
+                        <button onclick="toggleUserMenu()" class="text-xs sm:text-sm text-gray-600 hover:text-gray-800 transition-colors">Hoş geldiniz, <strong>Ahmet Bayi</strong></button>
+                        <div id="user-menu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                            <div class="py-1">
+                                <button onclick="logout()" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                                    </svg>
+                                    Çıkış Yap
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <!-- Mobile menu -->
@@ -62,7 +74,13 @@ if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'bayi') {
                 </div>
                 <div class="pt-4 pb-3 border-t border-gray-200">
                     <div class="px-5">
-                        <p class="text-sm text-gray-600">Hoş geldiniz, <strong>Ahmet Bayi</strong></p>
+                        <p class="text-sm text-gray-600 mb-3">Hoş geldiniz, <strong>Ahmet Bayi</strong></p>
+                        <button onclick="logout()" class="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                            </svg>
+                            Çıkış Yap
+                        </button>
                     </div>
                 </div>
             </div>
@@ -552,6 +570,31 @@ if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'bayi') {
             mobileMenu.classList.toggle('hidden');
         }
 
+        // User menu functionality
+        function toggleUserMenu() {
+            const userMenu = document.getElementById('user-menu');
+            userMenu.classList.toggle('hidden');
+        }
+
+        // Logout functionality
+        function logout() {
+            if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+                alert('Başarıyla çıkış yapıldı. Giriş sayfasına yönlendiriliyorsunuz...');
+                // Here you would normally redirect to login page
+                // window.location.href = '/login';
+            }
+        }
+
+        // Close user menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const userMenu = document.getElementById('user-menu');
+            const userButton = event.target.closest('button[onclick="toggleUserMenu()"]');
+            
+            if (!userButton && !userMenu.contains(event.target)) {
+                userMenu.classList.add('hidden');
+            }
+        });
+
         // Navigation functionality
         function showSection(sectionName) {
             // Hide all sections
@@ -575,16 +618,17 @@ if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'bayi') {
                 btn.classList.add('text-gray-700', 'hover:text-gray-900', 'hover:bg-gray-100');
             });
             
-            // Highlight active button (desktop)
-            if (event && event.target.classList.contains('nav-btn')) {
-                event.target.classList.remove('text-gray-500', 'hover:text-gray-700');
-                event.target.classList.add('text-indigo-600', 'border-b-2', 'border-indigo-500');
+            // Highlight active button based on section name
+            const activeDesktopBtn = document.querySelector(`.nav-btn[onclick="showSection('${sectionName}')"]`);
+            if (activeDesktopBtn) {
+                activeDesktopBtn.classList.remove('text-gray-500', 'hover:text-gray-700');
+                activeDesktopBtn.classList.add('text-indigo-600', 'border-b-2', 'border-indigo-500');
             }
             
-            // Highlight active button (mobile)
-            if (event && event.target.classList.contains('mobile-nav-btn')) {
-                event.target.classList.remove('text-gray-700', 'hover:text-gray-900', 'hover:bg-gray-100');
-                event.target.classList.add('text-indigo-600', 'bg-indigo-50');
+            const activeMobileBtn = document.querySelector(`.mobile-nav-btn[onclick*="showSection('${sectionName}')"]`);
+            if (activeMobileBtn) {
+                activeMobileBtn.classList.remove('text-gray-700', 'hover:text-gray-900', 'hover:bg-gray-100');
+                activeMobileBtn.classList.add('text-indigo-600', 'bg-indigo-50');
             }
         }
 
@@ -649,5 +693,6 @@ if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'bayi') {
             showSection('dashboard');
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97187e1a2157e343',t:'MTc1NTU5NDM2Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97205c5974c4aba6',t:'MTc1NTY3Njg2NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
+
