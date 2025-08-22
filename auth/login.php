@@ -8,10 +8,9 @@ ini_set('display_errors', 0);
 error_reporting(E_ALL);
 function _dbg($m){ @file_put_contents(__DIR__.'/login-debug.log','['.date('c')."] $m\n",FILE_APPEND); }
 
-
 /* ---------- Backend base ---------- */
 if (!defined('API_BASE')) {
-  define('API_BASE','http://34.44.194.247:3001/api/auth'); 
+  define('API_BASE','http://34.44.194.247:3001/api/auth'); // sondaki slash YOK
 }
 const ADMIN_ROLES = ['admin','super_admin','merkez'];
 
@@ -124,6 +123,82 @@ function save_tokens_and_user(array $resp,array $who):void{
   session_regenerate_id(true);
 }
 
+/* =========================================================
+   JSON REGISTER HANDLER (aynı dosyada)
+   - Sadece Content-Type: application/json POST'larını yakalar
+   - Backend /register endpoint’ine body’yi iletir
+========================================================= */
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $ct = $_SERVER['CONTENT_TYPE'] ?? ($_SERVER['HTTP_CONTENT_TYPE'] ?? '');
+  if (stripos($ct, 'application/json') !== false) {
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+      $in = json_decode(file_get_contents('php://input'), true) ?: [];
+
+      // Backend’in beklediği payload’a uygun şekilde pasla (temel normalizasyon)
+      $payload = [
+        'type'        => $in['type']       ?? 'Bayi',               // 'Bayi' | 'IsOrtagi'
+        'legal_type'  => $in['legal_type'] ?? 'Sirket',             // 'Sirket' | 'Sahis'
+        'email'       => mb_strtolower(trim((string)($in['email'] ?? '')),'UTF-8'),
+        'password'    => (string)($in['password'] ?? ''),
+        'phone'       => trim((string)($in['phone'] ?? '')),
+        'address'     => trim((string)($in['address'] ?? '')),
+        'mfa_method'  => (($in['mfa_method'] ?? 'none') === 'email') ? 'email' : 'none',
+      ];
+
+      if ($payload['legal_type'] === 'Sirket') {
+        $payload['company_name'] = trim((string)($in['company_name'] ?? ''));
+        $payload['vkn']          = preg_replace('~\D~','', (string)($in['vkn'] ?? ''));
+        if (!empty($in['tax_office'])) $payload['tax_office'] = trim((string)$in['tax_office']);
+      } else {
+        $payload['first_name'] = trim((string)($in['first_name'] ?? ''));
+        $payload['last_name']  = trim((string)($in['last_name']  ?? ''));
+        $payload['tckn']       = preg_replace('~\D~','', (string)($in['tckn'] ?? ''));
+      }
+
+      // Asıl API çağrısı
+      $resp = api_post_json('register', $payload);
+
+      if (($resp['status'] ?? null) === 'MFA_REQUIRED') {
+        $_SESSION['mfa']=[
+          'session_id'=>$resp['mfa']['session_id']??null,
+          'method'=>$resp['mfa']['method']??'email',
+          'expires_at'=>$resp['mfa']['expires_at']??null,
+          'prefill'=>[
+            'scope'=>'partner',
+            'email'=>$resp['auth']['email']??$payload['email'],
+            'partner_id'=>$resp['auth']['partner_id']??null,
+            'role'=>'bayi',
+          ],
+        ];
+        echo json_encode([
+          'success'=>true,
+          'next'=>'verify',
+          'message'=>$resp['message'] ?? 'Doğrulama kodu gönderildi.',
+          'redirect'=> url('auth/verify.php'),
+          'dev_otp'=> $resp['dev_otp'] ?? null,
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+      }
+
+      echo json_encode([
+        'success'=>true,
+        'next'=>'login',
+        'message'=>$resp['message'] ?? 'Kayıt oluşturuldu.',
+      ], JSON_UNESCAPED_UNICODE);
+      exit;
+
+    } catch (Throwable $e) {
+      http_response_code(400);
+      echo json_encode([
+        'success'=>false,
+        'message'=>$e->getMessage() ?: 'Kayıt başarısız.',
+      ], JSON_UNESCAPED_UNICODE);
+      exit;
+    }
+  }
+}
+
 /* ---------- Panel yönlendirme ---------- */
 function redirect_admin(){ safe_redirect(url('admin/anasayfa.php')); }
 function redirect_bayi(){ safe_redirect(url('bayi/bayi.php')); }
@@ -141,11 +216,10 @@ if (!empty($_SESSION['accessToken'])) {
 $error=null;
 
 /* ======================================================
-   POST: Sekmeye göre ZORLAMA
-   - Admin sekmesi → sadece /login/user; yanlışsa uyar
-   - Bayi  sekmesi → sadece /login/partner; yanlışsa uyar
+   POST (Form): Sekmeye göre ZORLAMA — sadece login için
 ====================================================== */
 if ($_SERVER['REQUEST_METHOD']==='POST'){
+  // Bu blok sadece form-encoded login içindir (JSON ise yukarıda exit edildi)
   $email    = trim($_POST['email']??'');
   $password = (string)($_POST['password']??'');
   $userType = $_POST['user_type'] ?? 'admin'; // 'admin' | 'bayi'
@@ -259,7 +333,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST'){
 }
 ?>
 
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -352,7 +425,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST'){
         </button>
       </form>
 
-      <!-- KAYIT FORMU (değişmedi; JS dışarı alındı) -->
+      <!-- KAYIT FORMU -->
       <div id="registerForm" class="space-y-5 hidden">
         <div id="registerError" class="text-red-600 text-sm mb-2 hidden"></div>
 
@@ -409,14 +482,43 @@ if ($_SERVER['REQUEST_METHOD']==='POST'){
           <div id="phone-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
         </div>
 
+        <!-- Adres -->
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-2">Adres *</label>
+          <textarea
+            id="address"
+            rows="2"
+            autocomplete="street-address"
+            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-500 input-focus focus:border-blue-500 focus:bg-white focus:outline-none transition-all duration-200 text-sm sm:text-base"
+            placeholder="Şirket adresi veya ikamet adresiniz"
+            oninput="clearError('address')"
+          ></textarea>
+          <div id="address-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
+        </div>
+
+        <!-- Güvenlik (MFA) Tercihi -->
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-3">Güvenlik (MFA)</label>
+          <div class="flex items-center gap-4 text-sm">
+            <label class="inline-flex items-center gap-2">
+              <input type="radio" name="mfaPref" id="mfaEmail" value="email">
+              <span>E-posta ile MFA (önerilir)</span>
+            </label>
+            <label class="inline-flex items-center gap-2">
+              <input type="radio" name="mfaPref" id="mfaNone" value="none" checked>
+              <span>Şimdilik yok</span>
+            </label>
+          </div>
+        </div>
+
         <div>
           <label class="block text-gray-700 text-sm font-medium mb-2">Şifre *</label>
           <div class="relative">
             <input type="password" id="registerPassword" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-500 input-focus focus:border-blue-500 focus:bg-white focus:outline-none transition-all duration-200 pr-12 text-sm sm:text-base" placeholder="••••••••" oninput="clearError('registerPassword')">
             <button type="button" onclick="togglePassword('registerPassword')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors" aria-label="Şifre görünürlüğünü değiştir" aria-pressed="false">
-              <!-- göz ikonları (SVG) -->
+              <!-- göz ikonları -->
               <svg class="w-5 h-5 eye-open hidden pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-              <svg class="w-5 h-5 eye-closed pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243 M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path></svg>
+              <svg class="w-5 h-5 eye-closed pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7 a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243 M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path></svg>
             </button>
           </div>
           <div id="registerPassword-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
@@ -427,7 +529,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST'){
           <div class="relative">
             <input type="password" id="confirmPassword" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-500 input-focus focus:border-blue-500 focus:bg-white focus:outline-none transition-all duration-200 pr-12 text-sm sm:text-base" placeholder="••••••••" oninput="clearError('confirmPassword')">
             <button type="button" onclick="togglePassword('confirmPassword')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors" aria-label="Şifre görünürlüğünü değiştir" aria-pressed="false">
-              <!-- göz ikonları (SVG, yukarıdakiyle aynı) -->
+              <!-- göz ikonları -->
               <svg class="w-5 h-5 eye-open hidden pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
               <svg class="w-5 h-5 eye-closed pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7 a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243 M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path></svg>
             </button>
@@ -488,9 +590,163 @@ if ($_SERVER['REQUEST_METHOD']==='POST'){
   </div>
 
   <!-- Harici JS -->
-<script src="<?= asset_url('login.js') ?>"></script>
+  <script src="<?= asset_url('login.js') ?>"></script>
 
+  <!-- Register JS (inline) – bu dosyanın kendisine POST JSON atar -->
+<script>
+/* ---- ufak yardımcılar ---- */
+window.openModal ||= function(title, html){
+  const o = document.getElementById('modalOverlay');
+  const t = document.getElementById('modalTitle');
+  const c = document.getElementById('modalContent');
+  if(!o||!t||!c){ alert((title?title+': ':'')+String(html||'').replace(/<[^>]+>/g,'')); return; }
+  t.textContent = title || '';
+  c.innerHTML   = html || '';
+  o.classList.remove('hidden'); o.classList.add('flex');
+};
+window.closeModal = function(){
+  const o = document.getElementById('modalOverlay');
+  if(o){ o.classList.add('hidden'); o.classList.remove('flex'); }
+};
+window.escapeHtml ||= (s)=>String(s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[m]));
+window.showError ||= function(id,msg){
+  const el = document.getElementById(id+'-error');
+  if(el){ if(msg) el.textContent = msg; el.classList.remove('hidden'); }
+};
+window.clearError ||= function(id){
+  const el = document.getElementById(id+'-error');
+  if(el){ el.classList.add('hidden'); }
+};
 
+/* ---- Şirket / Şahıs toggle ---- */
+(function initRegisterTypeToggle(){
+  const typeBtns = document.querySelectorAll('.register-type-btn'); // data-type="sirket" | "sahis"
+  const companyFields  = document.getElementById('companyFields');
+  const personalFields = document.getElementById('personalFields');
+
+  function setActive(btn){
+    typeBtns.forEach(b=>{
+      b.classList.remove('bg-blue-50','text-blue-600','border-blue-200');
+      b.classList.add('bg-gray-50','text-gray-600','border-gray-200');
+    });
+    btn.classList.add('bg-blue-50','text-blue-600','border-blue-200');
+    btn.classList.remove('bg-gray-50','text-gray-600','border-gray-200');
+
+    if (btn.dataset.type === 'sahis') {
+      personalFields?.classList.remove('hidden');
+      companyFields?.classList.add('hidden');
+    } else {
+      companyFields?.classList.remove('hidden');
+      personalFields?.classList.add('hidden');
+    }
+  }
+
+  // İlk yüklemede varsayılanı belirle (ekranın durumuna göre)
+  const initiallyActive = Array.from(typeBtns).find(b => b.classList.contains('bg-blue-50')) || typeBtns[0];
+  if (initiallyActive) setActive(initiallyActive);
+
+  // Tıklamaları dinle
+  typeBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=> setActive(btn));
+  });
+})();
+
+/* ---- Register gönder ---- */
+window.handleRegister = async function () {
+  try {
+    // aktif tip butonu: 'bg-blue-50' class'lı
+    const activeTypeBtn = Array.from(document.querySelectorAll('.register-type-btn'))
+      .find(b => b.classList.contains('bg-blue-50'));
+    const regType = activeTypeBtn?.dataset?.type || 'sirket';       // 'sirket' | 'sahis'
+    const legal_type = regType === 'sahis' ? 'Sahis' : 'Sirket';     // <-- backend beklediği şekilde
+
+    // MFA tercihi
+    const mfa_method = document.getElementById('mfaEmail')?.checked ? 'email' : 'none';
+
+    // Ortak alanlar
+    const email   = document.getElementById('registerEmail')?.value.trim() || '';
+    const phone   = document.getElementById('phone')?.value.trim() || '';
+    const address = document.getElementById('address')?.value.trim() || '';
+    const pass1   = document.getElementById('registerPassword')?.value || '';
+    const pass2   = document.getElementById('confirmPassword')?.value || '';
+
+    let valid = true;
+    if (!email){ showError('registerEmail'); valid=false; }
+    if (!phone){ showError('phone'); valid=false; }
+    if (!address){ showError('address'); valid=false; }
+    if (!pass1){ showError('registerPassword'); valid=false; }
+    if (!pass2){ showError('confirmPassword'); valid=false; }
+    if (pass1 && pass2 && pass1 !== pass2){ showError('confirmPassword','Şifreler uyuşmuyor'); valid=false; }
+    if (!document.getElementById('kvkkCheck')?.checked){ showError('kvkkCheck'); valid=false; }
+    if (!document.getElementById('contractCheck')?.checked){ showError('contractCheck'); valid=false; }
+    if (!valid) return;
+
+    const payload = {
+      type: 'Bayi',
+      legal_type,
+      email,
+      password: pass1,
+      phone,
+      address,
+      mfa_method
+    };
+
+    if (legal_type === 'Sirket') {
+      const company_name = document.getElementById('companyName')?.value.trim() || '';
+      const vkn = (document.getElementById('taxNumber')?.value || '').replace(/\D/g,'');
+      if (!company_name){ showError('companyName'); return; }
+      if (!/^\d{10}$/.test(vkn)){ showError('taxNumber','10 haneli VKN girin'); return; }
+      payload.company_name = company_name;
+      payload.vkn = vkn;
+      // İstersen: payload.tax_office = document.getElementById('taxOffice')?.value.trim() || null;
+    } else {
+      const first_name = document.getElementById('firstName')?.value.trim() || '';
+      const last_name  = document.getElementById('lastName')?.value.trim() || '';
+      const tckn       = (document.getElementById('tcNumber')?.value || '').replace(/\D/g,'');
+      if (!first_name){ showError('firstName'); return; }
+      if (!last_name){ showError('lastName'); return; }
+      if (!/^\d{11}$/.test(tckn)){ showError('tcNumber','11 haneli TCKN girin'); return; }
+      payload.first_name = first_name;
+      payload.last_name  = last_name;
+      payload.tckn       = tckn;
+    }
+
+    // BU DOSYANIN KENDİSİNE JSON POST (login.php JSON proxy ise)
+    const endpoint = window.location.pathname; // auth/login.php
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(()=> ({}));
+
+    if (!res.ok || !data?.success) {
+      openModal('Kayıt Hatası', `<p class="text-red-600">${escapeHtml(data?.message || `HTTP ${res.status}`)}</p>`);
+      return;
+    }
+
+    if (data.next === 'verify' && data.redirect) {
+      openModal('Doğrulama Gerekli', `
+        <p>${escapeHtml(data.message || 'E-posta ile doğrulama kodu gönderildi.')}</p>
+        ${data.dev_otp ? `<p class="mt-2 text-xs">DEV OTP: <b>${escapeHtml(String(data.dev_otp))}</b></p>` : ''}
+        <p class="mt-3">Kod sayfasına yönlendiriliyorsunuz…</p>
+      `);
+      setTimeout(()=>{ location.href = data.redirect; }, 700);
+      return;
+    }
+
+    openModal('Kayıt Başarılı', `
+      <p>${escapeHtml(data.message || 'Kayıt oluşturuldu.')}</p>
+      <p class="mt-3">Devam etmek için giriş yapabilirsiniz.</p>
+    `);
+    const loginTab = document.getElementById('loginTab');
+    if (loginTab) setTimeout(()=> loginTab.click(), 800);
+
+  } catch (err) {
+    openModal('Kayıt Hatası', `<p class="text-red-600">${escapeHtml(err?.message || String(err))}</p>`);
+  }
+};
+</script>
 
 </body>
 </html>
