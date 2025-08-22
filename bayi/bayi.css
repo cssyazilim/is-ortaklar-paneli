@@ -1,0 +1,19 @@
+/* Genel font */
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Teklif / sipariş durum etiketleri */
+.status-draft     { background-color: #f3f4f6; color: #1f2937; }   /* gri */
+.status-sent      { background-color: #dbeafe; color: #1e40af; }   /* mavi */
+.status-review    { background-color: #fef3c7; color: #92400e; }   /* sarı */
+.status-ready     { background-color: #dcfce7; color: #166534; }   /* yeşil */
+.status-approved  { background-color: #d1fae5; color: #065f46; }   /* zümrüt */
+.status-rejected  { background-color: #fee2e2; color: #991b1b; }   /* kırmızı */
+.status-pending   { background-color: #ffedd5; color: #9a3412; }   /* turuncu */
+.status-completed { background-color: #dcfce7; color: #166534; }   /* yeşil */
+
+/* Dropdown menülerin üstte kalması için */
+#user-menu {
+  z-index: 50;
+}

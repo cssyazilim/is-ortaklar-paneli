@@ -1,13 +1,13 @@
 <?php
 // /is-ortaklar-paneli/api/register-proxy.php
-// Amaç: Frontend'den gelen JSON'ı gerçek API'ye (34.44.194.247:3000) server-side POST etmek (CORS yok)
+// Amaç: Frontend'den gelen JSON'ı gerçek API'ye (34.44.194.247:3001) server-side POST etmek (CORS yok)
 
 header('Content-Type: application/json; charset=utf-8');
 
 $target = $_GET['target'] ?? '';
 $map = [
-  'company'    => 'http://34.44.194.247:3000/api/auth/register/company',
-  'individual' => 'http://34.44.194.247:3000/api/auth/register/individual',
+  'company'    => 'http://34.44.194.247:3001/api/auth/register/company',
+  'individual' => 'http://34.44.194.247:3001/api/auth/register/individual',
 ];
 
 if (!isset($map[$target])) {

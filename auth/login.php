@@ -1,101 +1,265 @@
 <?php
+// auth/login.php
 require_once __DIR__ . '/../config/config.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
 
-// Oturumda rol varsa yönlendir
-if (isset($_SESSION['user']['role'])) {
-  $role = $_SESSION['user']['role'];
-  header('Location: ' . ($role === 'admin' ? url('admin/anasayfa.php') : url('bayi/bayi.php')));
-  exit;
+/* ---------- Debug (isteğe bağlı log) ---------- */
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+function _dbg($m){ @file_put_contents(__DIR__.'/login-debug.log','['.date('c')."] $m\n",FILE_APPEND); }
+
+
+/* ---------- Backend base ---------- */
+if (!defined('API_BASE')) {
+  define('API_BASE','http://34.44.194.247:3001/api/auth'); 
+}
+const ADMIN_ROLES = ['admin','super_admin','merkez'];
+
+if (!function_exists('url')) {
+  function url(string $p){ return $p; }
 }
 
+/* ---------- Güvenli redirect ---------- */
+function safe_redirect(string $url,int $code=302):void{
+  if(!headers_sent()){
+    header('Location: '.$url,true,$code);
+    session_write_close(); exit;
+  }
+  echo '<script>location.href='.json_encode($url).';</script>';
+  echo '<noscript><meta http-equiv="refresh" content="0;url='.htmlspecialchars($url,ENT_QUOTES,'UTF-8').'"></noscript>';
+  session_write_close(); exit;
+}
 
-$error = null;
+/* ---------- HTTP yardımcıları ---------- */
+function api_post_json(string $path,array $body):array{
+  $url=rtrim(API_BASE,'/').'/'.ltrim($path,'/');
+  $payload=json_encode($body,JSON_UNESCAPED_UNICODE);
+  _dbg("POST $url :: $payload");
 
-/** Basit API istemcisi */
-function api_login(string $email, string $password): array {
-  $url = 'http://34.44.194.247:3000/api/auth/login'; // prod'da https yap
-  $payload = json_encode(['email'=>$email,'password'=>$password], JSON_UNESCAPED_UNICODE);
-
-  $ch = curl_init($url);
-  curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_POST           => true,
-    CURLOPT_HTTPHEADER     => ['Content-Type: application/json','Accept: application/json'],
-    CURLOPT_POSTFIELDS     => $payload,
-    CURLOPT_TIMEOUT        => 20,
+  $ch=curl_init($url);
+  curl_setopt_array($ch,[
+    CURLOPT_RETURNTRANSFER=>true,
+    CURLOPT_POST=>true,
+    CURLOPT_HTTPHEADER=>['Content-Type: application/json','Accept: application/json'],
+    CURLOPT_POSTFIELDS=>$payload,
+    CURLOPT_TIMEOUT=>20,
   ]);
-
-  $raw    = curl_exec($ch);
-  $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-  $err    = curl_error($ch);
+  $raw=curl_exec($ch);
+  $code=curl_getinfo($ch,CURLINFO_HTTP_CODE);
+  $err=curl_error($ch);
   curl_close($ch);
 
-  if ($raw === false) throw new RuntimeException('Sunucuya ulaşılamadı: '.$err);
+  _dbg("RESP($code): ".substr((string)$raw,0,400));
 
-  $json = json_decode($raw, true);
-  if ($json === null && json_last_error() !== JSON_ERROR_NONE) {
+  if($raw===false) throw new RuntimeException('Sunucuya ulaşılamadı: '.$err);
+  $json=json_decode($raw,true);
+  if(!is_array($json)){
+    if(stripos($raw,'Cannot ')!==false || stripos($raw,'<!DOCTYPE')!==false){
+      throw new RuntimeException('Yanlış endpoint: '.$url.' → '.strip_tags($raw));
+    }
     throw new RuntimeException('Geçersiz yanıt: '.$raw);
   }
+  if($code<200||$code>=300){
+    $msg=$json['message']??$json['error']??('HTTP '.$code);
+    throw new RuntimeException($msg);
+  }
+  return $json;
+}
+function api_get_json(string $path,array $headers=[]):array{
+  $url=rtrim(API_BASE,'/').'/'.ltrim($path,'/');
+  $h=array_merge(['Accept: application/json'],$headers);
+  _dbg("GET $url");
 
-  if ($status < 200 || $status >= 300) {
-    $msg = $json['message'] ?? $json['error'] ?? ('Giriş başarısız (HTTP '.$status.')');
-    if (!empty($json['errors']) && is_array($json['errors'])) {
-      foreach ($json['errors'] as $arr) { if (!empty($arr[0])) { $msg .= ' - '.$arr[0]; break; } }
-    }
+  $ch=curl_init($url);
+  curl_setopt_array($ch,[
+    CURLOPT_RETURNTRANSFER=>true,
+    CURLOPT_HTTPHEADER=>$h,
+    CURLOPT_TIMEOUT=>20,
+  ]);
+  $raw=curl_exec($ch);
+  $code=curl_getinfo($ch,CURLINFO_HTTP_CODE);
+  $err=curl_error($ch);
+  curl_close($ch);
+
+  _dbg("RESP($code): ".substr((string)$raw,0,400));
+
+  if($raw===false) throw new RuntimeException('Sunucuya ulaşılamadı: '.$err);
+  $json=json_decode($raw,true);
+  if(!is_array($json)) throw new RuntimeException('Geçersiz yanıt: '.$raw);
+  if($code<200||$code>=300){
+    $msg=$json['message']??$json['error']??('HTTP '.$code);
     throw new RuntimeException($msg);
   }
   return $json;
 }
 
-// Form post
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $email    = trim($_POST['email'] ?? '');
-  $password = (string)($_POST['password'] ?? '');
-  $userType = $_POST['user_type'] ?? null; // admin | bayi
+/* ---------- MFA sinyali ---------- */
+function resp_requires_mfa(array $r):bool{
+  if(($r['status']??null)==='MFA_REQUIRED') return true;
+  if(isset($r['mfa']['session_id'])) return true;
+  return false;
+}
 
-  if ($email === '' || $password === '') {
-    $error = 'E-posta ve şifre zorunludur.';
-  } else {
+/* ---------- Sarmalayıcılar ---------- */
+function api_login_user(string $e,string $p):array{ return api_post_json('login/user',['email'=>$e,'password'=>$p]); }
+function api_login_partner(string $e,string $p):array{ return api_post_json('login/partner',['email'=>$e,'password'=>$p]); }
+function api_me(string $at):array{ return api_get_json('me',['Authorization: Bearer '.$at]); }
+
+/* ---------- Session yaz ---------- */
+function save_tokens_and_user(array $resp,array $who):void{
+  $_SESSION['accessToken']      = $resp['accessToken']        ?? null;
+  $_SESSION['refreshToken']     = $resp['refreshToken']       ?? null;
+  $_SESSION['sessionId']        = $resp['sessionId']          ?? null;
+  $_SESSION['refreshExpiresAt'] = $resp['refresh_expires_at'] ?? ($resp['refreshExpiresAt'] ?? null);
+
+  $_SESSION['user']=[
+    'email'=>$who['email']??null,
+    'role'=>$who['role']??null,
+    'partner_id'=>$who['partner_id']??null,
+    'account_status'=>$resp['account_status']??null,
+    'id'=>$who['id']??null,
+  ];
+  $_SESSION['email']=$_SESSION['user']['email'];
+  $_SESSION['role'] =$_SESSION['user']['role'];
+  session_regenerate_id(true);
+}
+
+/* ---------- Panel yönlendirme ---------- */
+function redirect_admin(){ safe_redirect(url('admin/anasayfa.php')); }
+function redirect_bayi(){ safe_redirect(url('bayi/bayi.php')); }
+
+/* ---------- Zaten login ise /me ile yerine gönder ---------- */
+if (!empty($_SESSION['accessToken'])) {
+  try {
+    $me = api_me($_SESSION['accessToken']);
+    if (($me['userType'] ?? null) === 'partner') redirect_bayi();
+    $role = $me['user']['role'] ?? null;
+    if ($role && in_array($role, ADMIN_ROLES, true)) redirect_admin();
+  } catch(Throwable $e){ /* token bozuksa devam */ }
+}
+
+$error=null;
+
+/* ======================================================
+   POST: Sekmeye göre ZORLAMA
+   - Admin sekmesi → sadece /login/user; yanlışsa uyar
+   - Bayi  sekmesi → sadece /login/partner; yanlışsa uyar
+====================================================== */
+if ($_SERVER['REQUEST_METHOD']==='POST'){
+  $email    = trim($_POST['email']??'');
+  $password = (string)($_POST['password']??'');
+  $userType = $_POST['user_type'] ?? 'admin'; // 'admin' | 'bayi'
+  if($email===''||$password===''){ $error='E-posta ve şifre zorunludur.'; }
+  else {
     try {
-      $resp = api_login($email, $password);
+      if ($userType === 'admin') {
+        // ---- ADMIN SEKME
+        try {
+          $resp = api_login_user($email,$password);
 
-      $apiRole = $resp['user']['role'] ?? 'partner_user';
-      $normalizedRole = ($apiRole === 'admin') ? 'admin' : 'bayi';
+          if (resp_requires_mfa($resp)) {
+            $_SESSION['mfa']=[
+              'session_id'=>$resp['mfa']['session_id']??null,
+              'method'=>$resp['mfa']['method']??'email',
+              'expires_at'=>$resp['mfa']['expires_at']??null,
+              'prefill'=>[
+                'scope'=>'user','email'=>$resp['auth']['email']??$email,
+                'user_id'=>$resp['auth']['user_id']??null,'role'=>$resp['auth']['role']??'admin',
+              ],
+            ];
+            safe_redirect(url('auth/verify.php'));
+          }
 
-      if ($normalizedRole !== $userType) {
-        throw new RuntimeException(
-          $normalizedRole === 'admin'
-            ? 'Bu hesap ADMIN rolündedir. Admin sekmesinden giriş yapmalısınız.'
-            : 'Bu hesap BAYİ rolündedir. Bayi sekmesinden giriş yapmalısınız.'
-        );
+          save_tokens_and_user($resp,['email'=>$email,'role'=>'admin']);
+          $me = api_me($_SESSION['accessToken']);
+          $role = $me['user']['role'] ?? null;
+
+          if (!$role || !in_array($role, ADMIN_ROLES, true)) {
+            // Admin yetkisi yok; bu hesap aslında bayi mi?
+            $_SESSION = []; if (session_id()) session_destroy(); session_start();
+            try {
+              $probe = api_login_partner($email,$password); // başarı/MFA → bayi hesabı
+              $isPartner = resp_requires_mfa($probe) || !empty($probe['accessToken']);
+              if ($isPartner) {
+                $error = 'Bu bir BAYİ hesabıdır. Lütfen "Bayi" sekmesinden giriş yapın.'; 
+                throw new RuntimeException($error);
+              }
+            } catch(Throwable $eProbe){ /* ignore */ }
+            $error = 'Bu kullanıcı admin panel yetkisine sahip değil.';
+          } else {
+            redirect_admin();
+          }
+
+        } catch (Throwable $eUser) {
+          // /login/user başarısız. Aynı bilgilerle bayi mi?
+          try {
+            $probe = api_login_partner($email,$password);
+            if (resp_requires_mfa($probe) || !empty($probe['accessToken'])) {
+              $error = 'Bu bir BAYİ hesabıdır. Lütfen "Bayi" sekmesinden giriş yapın.';
+            } else {
+              $error = $eUser->getMessage();
+            }
+          } catch(Throwable $eProbe){
+            $error = $eUser->getMessage() ?: 'Giriş başarısız.';
+          }
+        }
+
+      } else {
+        // ---- BAYİ SEKME
+        try {
+          $resp = api_login_partner($email,$password);
+
+          if (resp_requires_mfa($resp)) {
+            $_SESSION['mfa']=[
+              'session_id'=>$resp['mfa']['session_id']??null,
+              'method'=>$resp['mfa']['method']??'email',
+              'expires_at'=>$resp['mfa']['expires_at']??null,
+              'prefill'=>[
+                'scope'=>'partner','email'=>$resp['auth']['email']??$email,
+                'partner_id'=>$resp['auth']['partner_id']??null,'role'=>'bayi',
+              ],
+            ];
+            safe_redirect(url('auth/verify.php'));
+          }
+
+          // token geldiyse güvenli şekilde bayi paneline
+          save_tokens_and_user($resp,['email'=>$email,'role'=>'bayi']);
+          // ek kontrol: /me partner mi?
+          try {
+            $me=api_me($_SESSION['accessToken']);
+            if (($me['userType'] ?? null) !== 'partner') {
+              // muhtemelen yanlış; güvenlik için iptal edip uyaralım
+              $_SESSION=[]; if(session_id()) session_destroy(); session_start();
+              $error = 'Bu kullanıcı bayi hesabı değil. Lütfen "Admin" sekmesinden giriş yapın.';
+            } else {
+              redirect_bayi();
+            }
+          } catch(Throwable $em){ redirect_bayi(); }
+
+        } catch (Throwable $ePartner) {
+          // /login/partner başarısız. Aynı bilgilerle admin mi?
+          try {
+            $probe = api_login_user($email,$password);
+            if (resp_requires_mfa($probe) || !empty($probe['accessToken'])) {
+              $error = 'Bu bir ADMIN hesabıdır. Lütfen "Admin" sekmesinden giriş yapın.';
+            } else {
+              $error = $ePartner->getMessage();
+            }
+          } catch(Throwable $eProbe){
+            $error = $ePartner->getMessage() ?: 'Giriş başarısız.';
+          }
+        }
       }
-
-      $_SESSION['accessToken']      = $resp['accessToken']      ?? null;
-      $_SESSION['refreshToken']     = $resp['refreshToken']     ?? null;
-      $_SESSION['sessionId']        = $resp['sessionId']        ?? null;
-      $_SESSION['refreshExpiresAt'] = $resp['refreshExpiresAt'] ?? null;
-
-      $_SESSION['user'] = [
-        'id'         => $resp['user']['id']         ?? null,
-        'email'      => $resp['user']['email']      ?? $email,
-        'role'       => $normalizedRole,
-        'partner_id' => $resp['user']['partner_id'] ?? null,
-        'is_active'  => $resp['user']['is_active']  ?? null,
-      ];
-      $_SESSION['email'] = $_SESSION['user']['email'];
-      $_SESSION['role']  = $_SESSION['user']['role'];
-
-      session_regenerate_id(true);
-
-      header('Location: ' . ($normalizedRole === 'admin' ? url('admin/anasayfa.php') : url('bayi/bayi.php')));
-      exit;
 
     } catch (Throwable $ex) {
       $error = $ex->getMessage() ?: 'Giriş başarısız.';
+      _dbg('ERROR: '.$error);
     }
   }
 }
 ?>
+
+
 <!DOCTYPE html>
 <html lang="tr">
 <head>

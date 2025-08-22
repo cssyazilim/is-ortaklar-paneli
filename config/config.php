@@ -3,41 +3,35 @@ if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
-/** UYGULAMA URL KÖKÜ (web root'un public/ ise aşağıdaki iyi) */
-// config/config.php
-define('BASE', '/is-ortaklar-paneli/');  // <-- /public yok
+/** URL kökü */
+define('BASE', '/is-ortaklar-paneli/');
 
+/** DIŞ API AYARLARI — SONUNA /api/auth/ KOY! */
+define('API_BASE', 'http://34.44.194.247:3001/api/auth/');
 
-/** DIŞ API AYARLARI */
-define('API_BASE', 'http://34.44.194.247:3000'); // gerekirse https yap
-
-/** Rol -> Panel yönlendirme eşlemesi */
+/** Rol -> route */
 const ROLE_TO_ROUTE = [
-  'admin'         => 'admin/anasayfa.php',
-  'partner_user'  => 'bayi/bayi.php',
-  // gerekirse 'dealer', 'super_admin' vb. ekle
+  'admin'        => 'admin/anasayfa.php',
+  'partner'      => 'bayi/bayi.php',
+  'bayi'         => 'bayi/bayi.php',
+  'partner_user' => 'bayi/bayi.php',
 ];
 
-/** Basit yardımcılar */
 function asset_url(string $path): string { return BASE . 'assets/' . ltrim($path, '/'); }
 function url(string $path): string { return BASE . ltrim($path, '/'); }
-
-/** Küçük yardımcılar */
 function e($str){ return htmlspecialchars($str ?? '', ENT_QUOTES, 'UTF-8'); }
 
 function redirect_if_logged_in() {
   if (!empty($_SESSION['user']['role'])) {
-    $route = ROLE_TO_ROUTE[$_SESSION['user']['role']] ?? 'bayi/bayi.php';
-    header('Location: ' . BASE . $route);
-    exit;
+    $role = $_SESSION['user']['role'];
+    $route = ROLE_TO_ROUTE[$role] ?? 'bayi/bayi.php';
+    header('Location: ' . url($route)); exit;
   }
 }
 
-/** Oturum zorunlu sayfa koruması */
 function require_role(array $allowed){
   $role = $_SESSION['user']['role'] ?? null;
   if (!$role || !in_array($role, $allowed, true)) {
-    header('Location: '.BASE.'index.php');
-    exit;
+    header('Location: '.url('index.php')); exit;
   }
 }

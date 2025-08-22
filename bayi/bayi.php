@@ -3,27 +3,22 @@ session_start();
 if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'bayi') {
   header('Location: /is-ortaklar-paneli/login.php'); exit;
 }
- ?></p>
-
+?>
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bayi Yönetim Sistemi</title>
+
+    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .status-draft { @apply bg-gray-100 text-gray-800; }
-        .status-sent { @apply bg-blue-100 text-blue-800; }
-        .status-review { @apply bg-yellow-100 text-yellow-800; }
-        .status-ready { @apply bg-green-100 text-green-800; }
-        .status-approved { @apply bg-emerald-100 text-emerald-800; }
-        .status-rejected { @apply bg-red-100 text-red-800; }
-        .status-pending { @apply bg-orange-100 text-orange-800; }
-        .status-completed { @apply bg-green-100 text-green-800; }
-    </style>
+
+    <!-- Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bayi’ye özel CSS (Tailwind @apply yerine düz CSS sınıfları bu dosyada) -->
+    <link rel="stylesheet" href="/assets/css/bayi.css">
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
     <!-- Navigation -->
@@ -563,132 +558,11 @@ if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'bayi') {
         </div>
     </div>
 
-    <script>
-        // Mobile menu functionality
-        function toggleMobileMenu() {
-            const mobileMenu = document.getElementById('mobile-menu');
-            mobileMenu.classList.toggle('hidden');
-        }
+    <!-- Bayi’ye özel JS (tüm onclick fonksiyonları burada tanımlı olmalı) -->
+ <link rel="stylesheet" href="/is-ortaklar-paneli/bayi/bayi.css">
+<script src="/is-ortaklar-paneli/bayi/bayi.js"></script>
 
-        // User menu functionality
-        function toggleUserMenu() {
-            const userMenu = document.getElementById('user-menu');
-            userMenu.classList.toggle('hidden');
-        }
-
-        // Logout functionality
-        function logout() {
-            window.location.href = '/is-ortaklar-paneli/auth/logout.php';
-        }
-
-        // Close user menu when clicking outside
-        document.addEventListener('click', function(event) {
-            const userMenu = document.getElementById('user-menu');
-            const userButton = event.target.closest('button[onclick="toggleUserMenu()"]');
-            
-            if (!userButton && !userMenu.contains(event.target)) {
-                userMenu.classList.add('hidden');
-            }
-        });
-
-        // Navigation functionality
-        function showSection(sectionName) {
-            // Hide all sections
-            const sections = document.querySelectorAll('.section');
-            sections.forEach(section => section.classList.add('hidden'));
-            
-            // Show selected section
-            document.getElementById(sectionName).classList.remove('hidden');
-            
-            // Update desktop navigation buttons
-            const navButtons = document.querySelectorAll('.nav-btn');
-            navButtons.forEach(btn => {
-                btn.classList.remove('text-indigo-600', 'border-b-2', 'border-indigo-500');
-                btn.classList.add('text-gray-500', 'hover:text-gray-700');
-            });
-            
-            // Update mobile navigation buttons
-            const mobileNavButtons = document.querySelectorAll('.mobile-nav-btn');
-            mobileNavButtons.forEach(btn => {
-                btn.classList.remove('text-indigo-600', 'bg-indigo-50');
-                btn.classList.add('text-gray-700', 'hover:text-gray-900', 'hover:bg-gray-100');
-            });
-            
-            // Highlight active button based on section name
-            const activeDesktopBtn = document.querySelector(`.nav-btn[onclick="showSection('${sectionName}')"]`);
-            if (activeDesktopBtn) {
-                activeDesktopBtn.classList.remove('text-gray-500', 'hover:text-gray-700');
-                activeDesktopBtn.classList.add('text-indigo-600', 'border-b-2', 'border-indigo-500');
-            }
-            
-            const activeMobileBtn = document.querySelector(`.mobile-nav-btn[onclick*="showSection('${sectionName}')"]`);
-            if (activeMobileBtn) {
-                activeMobileBtn.classList.remove('text-gray-700', 'hover:text-gray-900', 'hover:bg-gray-100');
-                activeMobileBtn.classList.add('text-indigo-600', 'bg-indigo-50');
-            }
-        }
-
-        // Registration functionality
-        function submitRegistration() {
-            alert('Bayi kayıt başvurunuz başarıyla gönderildi! Operasyon ekibimiz en kısa sürede başvurunuzu inceleyecektir.');
-        }
-
-        // Quote functionality
-        function createNewQuote() {
-            alert('Yeni teklif oluşturma sayfasına yönlendiriliyorsunuz...');
-        }
-
-        function sendQuoteToCustomer(quoteId) {
-            alert(`${quoteId} numaralı teklif müşteriye e-posta ile gönderildi. Siz de CC olarak bilgilendirildiniz.`);
-        }
-
-        function editQuote(quoteId) {
-            alert(`${quoteId} numaralı teklif düzenleme sayfasına yönlendiriliyorsunuz...`);
-        }
-
-        function viewQuote(quoteId) {
-            alert(`${quoteId} numaralı teklif detayları görüntüleniyor...`);
-        }
-
-        function convertToOrder(quoteId) {
-            if (confirm(`${quoteId} numaralı teklifi siparişe dönüştürmek istediğinizden emin misiniz?`)) {
-                alert('Teklif başarıyla siparişe dönüştürüldü! Sipariş numarası: SIP-2024-004');
-            }
-        }
-
-        // Order functionality
-        function viewOrder(orderId) {
-            alert(`${orderId} numaralı sipariş detayları görüntüleniyor...`);
-        }
-
-        function updateOrderStatus(orderId) {
-            alert(`${orderId} numaralı siparişin durumu güncelleniyor...`);
-        }
-
-        function startDelivery(orderId) {
-            if (confirm(`${orderId} numaralı sipariş için teslimat sürecini başlatmak istediğinizden emin misiniz?`)) {
-                alert('Teslimat süreci başlatıldı! Müşteri bilgilendirildi.');
-            }
-        }
-
-        // Simulate automatic billing process
-        function simulateAutoBilling() {
-            // This would normally be handled by backend systems
-            console.log('Otomatik faturalandırma sistemi çalışıyor...');
-            console.log('Aylık server hizmet faturaları oluşturuluyor...');
-            console.log('Yıllık bakım faturaları kontrol ediliyor...');
-            console.log('Hakediş hesaplamaları yapılıyor...');
-        }
-
-        // Initialize the system
-        document.addEventListener('DOMContentLoaded', function() {
-            // Simulate automatic processes
-            setInterval(simulateAutoBilling, 60000); // Check every minute
-            
-            // Show dashboard by default
-            showSection('dashboard');
-        });
-    </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97205c5974c4aba6',t:'MTc1NTY3Njg2NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+    <!-- (Cloudflare vb. script gerekiyorsa en sonda bırakın) -->
+    <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97205c5974c4aba6',t:'MTc1NTY3Njg2NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+</body>
 </html>
-

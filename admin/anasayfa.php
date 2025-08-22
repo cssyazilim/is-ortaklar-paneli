@@ -1,19 +1,3 @@
-<?php
-session_start();
-$BASE = '/is-ortaklar-paneli/';
-
-if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'admin') {
-  header('Location: /is-ortaklar-paneli/login.php'); exit;
-}
-
-if (($_SESSION['user']['role'] ?? null) !== 'admin') {
-    http_response_code(403);
-    header('Location: /is-ortaklar-paneli/bayi/bayi.php');
-    exit;
-}
-
-?>
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -419,17 +403,345 @@ if (($_SESSION['user']['role'] ?? null) !== 'admin') {
 
             <!-- Diğer modül içerikleri buraya eklenecek -->
             <div id="customers-content" class="module-content hidden">
-                <div class="bg-white rounded-lg card-shadow">
-                    <div class="p-6 border-b border-gray-200">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-lg font-semibold text-gray-900">Müşterilerim</h3>
-                            <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                                + Yeni Müşteri
-                            </button>
+                <!-- Müşteri Listesi ve Yeni Müşteri Formu -->
+                <div id="customer-list-view" class="space-y-6">
+                    <!-- Üst Bar -->
+                    <div class="bg-white rounded-lg card-shadow">
+                        <div class="p-6 border-b border-gray-200">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900">Müşterilerim</h3>
+                                    <p class="text-sm text-gray-600 mt-1">Toplam 127 müşteri</p>
+                                </div>
+                                <button onclick="showAddCustomerForm()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                    </svg>
+                                    Yeni Müşteri
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Arama ve Filtreler -->
+                        <div class="p-6 border-b border-gray-200">
+                            <div class="flex flex-col md:flex-row gap-4">
+                                <div class="flex-1 relative">
+                                    <input type="text" placeholder="Müşteri ara..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    </svg>
+                                </div>
+                                <select class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option>Tüm Kategoriler</option>
+                                    <option>Kurumsal</option>
+                                    <option>Bireysel</option>
+                                    <option>Bayi</option>
+                                </select>
+                                <select class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option>Tüm Durumlar</option>
+                                    <option>Aktif</option>
+                                    <option>Pasif</option>
+                                    <option>Beklemede</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Müşteri Listesi -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İletişim</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Son İşlem</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durum</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                                    <span class="text-blue-600 font-medium text-sm">AT</span>
+                                                </div>
+                                                <div class="ml-4">
+                                                    <div class="text-sm font-medium text-gray-900">ABC Teknoloji Ltd.</div>
+                                                    <div class="text-sm text-gray-500">Ahmet Yılmaz</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm text-gray-900">+90 532 123 45 67</div>
+                                            <div class="text-sm text-gray-500">ahmet@abcteknoloji.com</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">Kurumsal</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            2 gün önce
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Aktif</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                            <button class="text-blue-600 hover:text-blue-900 mr-3">Düzenle</button>
+                                            <button class="text-red-600 hover:text-red-900">Sil</button>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                                    <span class="text-green-600 font-medium text-sm">XY</span>
+                                                </div>
+                                                <div class="ml-4">
+                                                    <div class="text-sm font-medium text-gray-900">XYZ İnşaat A.Ş.</div>
+                                                    <div class="text-sm text-gray-500">Mehmet Demir</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm text-gray-900">+90 533 987 65 43</div>
+                                            <div class="text-sm text-gray-500">mehmet@xyzinsaat.com</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">Bayi</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            1 hafta önce
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Aktif</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                            <button class="text-blue-600 hover:text-blue-900 mr-3">Düzenle</button>
+                                            <button class="text-red-600 hover:text-red-900">Sil</button>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                                                    <span class="text-orange-600 font-medium text-sm">DE</span>
+                                                </div>
+                                                <div class="ml-4">
+                                                    <div class="text-sm font-medium text-gray-900">DEF Elektronik</div>
+                                                    <div class="text-sm text-gray-500">Ayşe Kaya</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm text-gray-900">+90 534 456 78 90</div>
+                                            <div class="text-sm text-gray-500">ayse@defelektronik.com</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">Bireysel</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            3 gün önce
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">Beklemede</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                            <button class="text-blue-600 hover:text-blue-900 mr-3">Düzenle</button>
+                                            <button class="text-red-600 hover:text-red-900">Sil</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Sayfalama -->
+                        <div class="px-6 py-4 border-t border-gray-200">
+                            <div class="flex items-center justify-between">
+                                <div class="text-sm text-gray-700">
+                                    <span class="font-medium">1</span> - <span class="font-medium">10</span> arası, toplam <span class="font-medium">127</span> kayıt
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">Önceki</button>
+                                    <button class="px-3 py-1 text-sm bg-blue-600 text-white rounded">1</button>
+                                    <button class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">2</button>
+                                    <button class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">3</button>
+                                    <button class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">Sonraki</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="p-6">
-                        <p class="text-gray-600">Müşteri yönetimi modülü burada geliştirilecek...</p>
+                </div>
+
+                <!-- Yeni Müşteri Ekleme Formu -->
+                <div id="add-customer-form" class="hidden">
+                    <div class="bg-white rounded-lg card-shadow">
+                        <div class="p-6 border-b border-gray-200">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900">Yeni Müşteri Ekle</h3>
+                                    <p class="text-sm text-gray-600 mt-1">Müşteri bilgilerini eksiksiz doldurun</p>
+                                </div>
+                                <button onclick="hideAddCustomerForm()" class="text-gray-400 hover:text-gray-600">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <form onsubmit="saveCustomer(event)" class="p-6">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <!-- Sol Kolon -->
+                                <div class="space-y-6">
+                                    <!-- Temel Bilgiler -->
+                                    <div>
+                                        <h4 class="text-md font-medium text-gray-900 mb-4">Temel Bilgiler</h4>
+                                        <div class="space-y-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">Müşteri Tipi *</label>
+                                                <select id="customerType" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                                    <option value="">Seçiniz</option>
+                                                    <option value="kurumsal">Kurumsal</option>
+                                                    <option value="bireysel">Bireysel</option>
+                                                    <option value="bayi">Bayi</option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">Şirket/Kişi Adı *</label>
+                                                <input type="text" id="companyName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Şirket veya kişi adını girin" required>
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">Yetkili Kişi</label>
+                                                <input type="text" id="contactPerson" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Yetkili kişi adı">
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">Unvan</label>
+                                                <input type="text" id="title" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Müdür, CEO, vb.">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- İletişim Bilgileri -->
+                                    <div>
+                                        <h4 class="text-md font-medium text-gray-900 mb-4">İletişim Bilgileri</h4>
+                                        <div class="space-y-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">Telefon *</label>
+                                                <input type="tel" id="phone" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="+90 5XX XXX XX XX" required>
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">E-posta *</label>
+                                                <input type="email" id="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="ornek@email.com" required>
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">İkinci Telefon</label>
+                                                <input type="tel" id="phone2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="+90 5XX XXX XX XX">
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">Web Sitesi</label>
+                                                <input type="url" id="website" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="https://www.ornek.com">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Sağ Kolon -->
+                                <div class="space-y-6">
+                                    <!-- Adres Bilgileri -->
+                                    <div>
+                                        <h4 class="text-md font-medium text-gray-900 mb-4">Adres Bilgileri</h4>
+                                        <div class="space-y-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">İl *</label>
+                                                <select id="city" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                                    <option value="">İl Seçiniz</option>
+                                                    <option value="istanbul">İstanbul</option>
+                                                    <option value="ankara">Ankara</option>
+                                                    <option value="izmir">İzmir</option>
+                                                    <option value="bursa">Bursa</option>
+                                                    <option value="antalya">Antalya</option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">İlçe *</label>
+                                                <select id="district" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                                    <option value="">İlçe Seçiniz</option>
+                                                    <option value="kadikoy">Kadıköy</option>
+                                                    <option value="besiktas">Beşiktaş</option>
+                                                    <option value="sisli">Şişli</option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">Adres *</label>
+                                                <textarea id="address" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Detaylı adres bilgisi" required></textarea>
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">Posta Kodu</label>
+                                                <input type="text" id="postalCode" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="34000">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Ek Bilgiler -->
+                                    <div>
+                                        <h4 class="text-md font-medium text-gray-900 mb-4">Ek Bilgiler</h4>
+                                        <div class="space-y-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">Vergi Dairesi</label>
+                                                <input type="text" id="taxOffice" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Vergi dairesi adı">
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">Vergi No / TC No</label>
+                                                <input type="text" id="taxNumber" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Vergi numarası veya TC kimlik no">
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">Sektör</label>
+                                                <select id="sector" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                                    <option value="">Sektör Seçiniz</option>
+                                                    <option value="teknoloji">Teknoloji</option>
+                                                    <option value="insaat">İnşaat</option>
+                                                    <option value="otomotiv">Otomotiv</option>
+                                                    <option value="gida">Gıda</option>
+                                                    <option value="tekstil">Tekstil</option>
+                                                    <option value="diger">Diğer</option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">Notlar</label>
+                                                <textarea id="notes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Müşteri hakkında özel notlar..."></textarea>
+                                            </div>
+
+                                            <div class="flex items-center">
+                                                <input type="checkbox" id="isActive" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" checked>
+                                                <label for="isActive" class="ml-2 block text-sm text-gray-700">Aktif müşteri</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Form Butonları -->
+                            <div class="mt-8 flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                                <button type="button" onclick="hideAddCustomerForm()" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                                    İptal
+                                </button>
+                                <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                    Müşteriyi Kaydet
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -594,9 +906,7 @@ if (($_SESSION['user']['role'] ?? null) !== 'admin') {
 
         // Çıkış yap
         function logout() {
-            if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
-                window.location.href = '/is-ortaklar-paneli/auth/logout.php';
-            }
+              window.location.href = '/is-ortaklar-paneli/auth/logout.php'; 
         }
 
         // Responsive kontrol
@@ -625,11 +935,73 @@ if (($_SESSION['user']['role'] ?? null) !== 'admin') {
             }
         });
 
+        // Müşteri formu işlevleri
+        function showAddCustomerForm() {
+            document.getElementById('customer-list-view').classList.add('hidden');
+            document.getElementById('add-customer-form').classList.remove('hidden');
+        }
+
+        function hideAddCustomerForm() {
+            document.getElementById('add-customer-form').classList.add('hidden');
+            document.getElementById('customer-list-view').classList.remove('hidden');
+        }
+
+        function saveCustomer(event) {
+            event.preventDefault();
+            
+            // Form verilerini al
+            const formData = {
+                customerType: document.getElementById('customerType').value,
+                companyName: document.getElementById('companyName').value,
+                contactPerson: document.getElementById('contactPerson').value,
+                title: document.getElementById('title').value,
+                phone: document.getElementById('phone').value,
+                email: document.getElementById('email').value,
+                phone2: document.getElementById('phone2').value,
+                website: document.getElementById('website').value,
+                city: document.getElementById('city').value,
+                district: document.getElementById('district').value,
+                address: document.getElementById('address').value,
+                postalCode: document.getElementById('postalCode').value,
+                taxOffice: document.getElementById('taxOffice').value,
+                taxNumber: document.getElementById('taxNumber').value,
+                sector: document.getElementById('sector').value,
+                notes: document.getElementById('notes').value,
+                isActive: document.getElementById('isActive').checked
+            };
+
+            // Form doğrulama
+            if (!formData.customerType || !formData.companyName || !formData.phone || !formData.email || !formData.city || !formData.district || !formData.address) {
+                alert('Lütfen zorunlu alanları doldurun!');
+                return;
+            }
+
+            // E-posta formatı kontrolü
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(formData.email)) {
+                alert('Lütfen geçerli bir e-posta adresi girin!');
+                return;
+            }
+
+            // Başarı mesajı
+            alert('Müşteri başarıyla kaydedildi!\n\nMüşteri: ' + formData.companyName + '\nTelefon: ' + formData.phone + '\nE-posta: ' + formData.email);
+            
+            // Formu temizle
+            document.querySelector('#add-customer-form form').reset();
+            document.getElementById('isActive').checked = true;
+            
+            // Liste görünümüne dön
+            hideAddCustomerForm();
+            
+            // Gerçek uygulamada burada API çağrısı yapılacak
+            console.log('Kaydedilen müşteri verisi:', formData);
+        }
+
         // Sayfa yüklendiğinde menü kapalı olarak başlat
         window.addEventListener('load', function() {
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.add('sidebar-closed');
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9710aea340fdb8a1',t:'MTc1NTUxMjQ2NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97224910f3ae5840',t:'MTc1NTY5NzA0Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
