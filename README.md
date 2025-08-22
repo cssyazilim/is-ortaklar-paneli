@@ -1,0 +1,1 @@
+﻿ # is-ortaklar-paneli 

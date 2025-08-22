@@ -1,0 +1,10 @@
+﻿# PHP / Windows
+/vendor/
+/.env
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+/.vscode/
+node_modules/
+composer.lock
