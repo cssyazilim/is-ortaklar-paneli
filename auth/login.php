@@ -124,9 +124,7 @@ function save_tokens_and_user(array $resp,array $who):void{
 }
 
 /* =========================================================
-   JSON REGISTER HANDLER (aynı dosyada)
-   - Sadece Content-Type: application/json POST'larını yakalar
-   - Backend /register endpoint’ine body’yi iletir
+   JSON REGISTER HANDLER (aynı dosyada) – ZORUNLU MFA (email|sms)
 ========================================================= */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $ct = $_SERVER['CONTENT_TYPE'] ?? ($_SERVER['HTTP_CONTENT_TYPE'] ?? '');
@@ -135,15 +133,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
       $in = json_decode(file_get_contents('php://input'), true) ?: [];
 
-      // Backend’in beklediği payload’a uygun şekilde pasla (temel normalizasyon)
+      // --- MFA kanalı: UI'dan gelen seçime göre (email | sms) ---
+      $mfaMethod = strtolower(trim((string)($in['mfa_method'] ?? 'email')));
+      if (!in_array($mfaMethod, ['email','sms'], true)) {
+        $mfaMethod = 'email';
+      }
+
+      // --- Telefonu normalize et (SMS seçilmişse zorunlu) ---
+      $phoneRaw = trim((string)($in['phone'] ?? ''));
+      $phone    = preg_replace('~\D~','', $phoneRaw);      // sadece rakam
+      if ($mfaMethod === 'sms') {
+        if ($phone === '') {
+          throw new Exception('SMS ile MFA için telefon zorunludur.');
+        }
+        // Basit TR normalize: 5XXXXXXXXX → 90 5XXXXXXXXX
+        if (strpos($phone, '90') !== 0 && strlen($phone) === 10 && $phone[0] === '5') {
+          $phone = '90' . $phone;
+        }
+      }
+
+      // Backend payload (kullanıcının seçimine göre mfa_method gönder)
       $payload = [
-        'type'        => $in['type']       ?? 'Bayi',               // 'Bayi' | 'IsOrtagi'
-        'legal_type'  => $in['legal_type'] ?? 'Sirket',             // 'Sirket' | 'Sahis'
+        'type'        => $in['type']       ?? 'Bayi',
+        'legal_type'  => $in['legal_type'] ?? 'Sirket',
         'email'       => mb_strtolower(trim((string)($in['email'] ?? '')),'UTF-8'),
         'password'    => (string)($in['password'] ?? ''),
-        'phone'       => trim((string)($in['phone'] ?? '')),
+        'phone'       => ($mfaMethod === 'sms') ? $phone : $phoneRaw, // mümkünse normalize gönder
         'address'     => trim((string)($in['address'] ?? '')),
-        'mfa_method'  => (($in['mfa_method'] ?? 'none') === 'email') ? 'email' : 'none',
+        'mfa_method'  => $mfaMethod, // ← zorunlu doğrulama, kanalı kullanıcı seçer
       ];
 
       if ($payload['legal_type'] === 'Sirket') {
@@ -156,35 +173,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $payload['tckn']       = preg_replace('~\D~','', (string)($in['tckn'] ?? ''));
       }
 
-      // Asıl API çağrısı
+      // Register çağrısı
       $resp = api_post_json('register', $payload);
 
-      if (($resp['status'] ?? null) === 'MFA_REQUIRED') {
-        $_SESSION['mfa']=[
-          'session_id'=>$resp['mfa']['session_id']??null,
-          'method'=>$resp['mfa']['method']??'email',
-          'expires_at'=>$resp['mfa']['expires_at']??null,
-          'prefill'=>[
-            'scope'=>'partner',
-            'email'=>$resp['auth']['email']??$payload['email'],
-            'partner_id'=>$resp['auth']['partner_id']??null,
-            'role'=>'bayi',
-          ],
-        ];
-        echo json_encode([
-          'success'=>true,
-          'next'=>'verify',
-          'message'=>$resp['message'] ?? 'Doğrulama kodu gönderildi.',
-          'redirect'=> url('auth/verify.php'),
-          'dev_otp'=> $resp['dev_otp'] ?? null,
-        ], JSON_UNESCAPED_UNICODE);
-        exit;
-      }
+      // --- Her durumda ZORUNLU VERIFY ekranına gönder ---
+      $_SESSION['mfa'] = [
+        'session_id' => $resp['mfa']['session_id'] ?? ($resp['session_id'] ?? null),
+        'method'     => $mfaMethod,  // email | sms
+        'expires_at' => $resp['mfa']['expires_at'] ?? null,
+        'forced'     => true,
+        'prefill'    => [
+          'scope'      => 'partner',
+          'role'       => 'bayi',
+          'email'      => $payload['email'],
+          'phone'      => ($mfaMethod === 'sms') ? $payload['phone'] : null,
+          'partner_id' => $resp['auth']['partner_id'] ?? null,
+        ],
+      ];
 
       echo json_encode([
-        'success'=>true,
-        'next'=>'login',
-        'message'=>$resp['message'] ?? 'Kayıt oluşturuldu.',
+        'success'         => true,
+        'verify_required' => true,
+        'method'          => $mfaMethod,                 // UI isterse gösterebilir
+        'next'            => 'verify',
+        'message'         => $resp['message'] ?? ($mfaMethod === 'sms'
+                                ? 'Kayıt oluşturuldu. SMS ile gönderilen doğrulama kodunu girin.'
+                                : 'Kayıt oluşturuldu. E-postanıza gönderilen doğrulama kodunu girin.'),
+        'redirect'        => url('auth/verify.php'),
+        'dev_otp'         => $resp['dev_otp'] ?? null,   // development kolaylığı varsa
       ], JSON_UNESCAPED_UNICODE);
       exit;
 
@@ -198,6 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
   }
 }
+
 
 /* ---------- Panel yönlendirme ---------- */
 function redirect_admin(){ safe_redirect(url('admin/anasayfa.php')); }
@@ -216,119 +233,55 @@ if (!empty($_SESSION['accessToken'])) {
 $error=null;
 
 /* ======================================================
-   POST (Form): Sekmeye göre ZORLAMA — sadece login için
+  POST (Form): Sadece BAYİ girişi yapılacak
 ====================================================== */
-if ($_SERVER['REQUEST_METHOD']==='POST'){
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   // Bu blok sadece form-encoded login içindir (JSON ise yukarıda exit edildi)
-  $email    = trim($_POST['email']??'');
-  $password = (string)($_POST['password']??'');
-  $userType = $_POST['user_type'] ?? 'admin'; // 'admin' | 'bayi'
-  if($email===''||$password===''){ $error='E-posta ve şifre zorunludur.'; }
-  else {
-    try {
-      if ($userType === 'admin') {
-        // ---- ADMIN SEKME
-        try {
-          $resp = api_login_user($email,$password);
+  $email    = trim($_POST['email'] ?? '');
+  $password = (string)($_POST['password'] ?? '');
+  if ($email === '' || $password === '') {
+   $error = 'E-posta ve şifre zorunludur.';
+  } else {
+   try {
+    $resp = api_login_partner($email, $password);
 
-          if (resp_requires_mfa($resp)) {
-            $_SESSION['mfa']=[
-              'session_id'=>$resp['mfa']['session_id']??null,
-              'method'=>$resp['mfa']['method']??'email',
-              'expires_at'=>$resp['mfa']['expires_at']??null,
-              'prefill'=>[
-                'scope'=>'user','email'=>$resp['auth']['email']??$email,
-                'user_id'=>$resp['auth']['user_id']??null,'role'=>$resp['auth']['role']??'admin',
-              ],
-            ];
-            safe_redirect(url('auth/verify.php'));
-          }
-
-          save_tokens_and_user($resp,['email'=>$email,'role'=>'admin']);
-          $me = api_me($_SESSION['accessToken']);
-          $role = $me['user']['role'] ?? null;
-
-          if (!$role || !in_array($role, ADMIN_ROLES, true)) {
-            // Admin yetkisi yok; bu hesap aslında bayi mi?
-            $_SESSION = []; if (session_id()) session_destroy(); session_start();
-            try {
-              $probe = api_login_partner($email,$password); // başarı/MFA → bayi hesabı
-              $isPartner = resp_requires_mfa($probe) || !empty($probe['accessToken']);
-              if ($isPartner) {
-                $error = 'Bu bir BAYİ hesabıdır. Lütfen "Bayi" sekmesinden giriş yapın.'; 
-                throw new RuntimeException($error);
-              }
-            } catch(Throwable $eProbe){ /* ignore */ }
-            $error = 'Bu kullanıcı admin panel yetkisine sahip değil.';
-          } else {
-            redirect_admin();
-          }
-
-        } catch (Throwable $eUser) {
-          // /login/user başarısız. Aynı bilgilerle bayi mi?
-          try {
-            $probe = api_login_partner($email,$password);
-            if (resp_requires_mfa($probe) || !empty($probe['accessToken'])) {
-              $error = 'Bu bir BAYİ hesabıdır. Lütfen "Bayi" sekmesinden giriş yapın.';
-            } else {
-              $error = $eUser->getMessage();
-            }
-          } catch(Throwable $eProbe){
-            $error = $eUser->getMessage() ?: 'Giriş başarısız.';
-          }
-        }
-
-      } else {
-        // ---- BAYİ SEKME
-        try {
-          $resp = api_login_partner($email,$password);
-
-          if (resp_requires_mfa($resp)) {
-            $_SESSION['mfa']=[
-              'session_id'=>$resp['mfa']['session_id']??null,
-              'method'=>$resp['mfa']['method']??'email',
-              'expires_at'=>$resp['mfa']['expires_at']??null,
-              'prefill'=>[
-                'scope'=>'partner','email'=>$resp['auth']['email']??$email,
-                'partner_id'=>$resp['auth']['partner_id']??null,'role'=>'bayi',
-              ],
-            ];
-            safe_redirect(url('auth/verify.php'));
-          }
-
-          // token geldiyse güvenli şekilde bayi paneline
-          save_tokens_and_user($resp,['email'=>$email,'role'=>'bayi']);
-          // ek kontrol: /me partner mi?
-          try {
-            $me=api_me($_SESSION['accessToken']);
-            if (($me['userType'] ?? null) !== 'partner') {
-              // muhtemelen yanlış; güvenlik için iptal edip uyaralım
-              $_SESSION=[]; if(session_id()) session_destroy(); session_start();
-              $error = 'Bu kullanıcı bayi hesabı değil. Lütfen "Admin" sekmesinden giriş yapın.';
-            } else {
-              redirect_bayi();
-            }
-          } catch(Throwable $em){ redirect_bayi(); }
-
-        } catch (Throwable $ePartner) {
-          // /login/partner başarısız. Aynı bilgilerle admin mi?
-          try {
-            $probe = api_login_user($email,$password);
-            if (resp_requires_mfa($probe) || !empty($probe['accessToken'])) {
-              $error = 'Bu bir ADMIN hesabıdır. Lütfen "Admin" sekmesinden giriş yapın.';
-            } else {
-              $error = $ePartner->getMessage();
-            }
-          } catch(Throwable $eProbe){
-            $error = $ePartner->getMessage() ?: 'Giriş başarısız.';
-          }
-        }
-      }
-
-    } catch (Throwable $ex) {
-      $error = $ex->getMessage() ?: 'Giriş başarısız.';
-      _dbg('ERROR: '.$error);
+    if (resp_requires_mfa($resp)) {
+      $_SESSION['mfa'] = [
+       'session_id' => $resp['mfa']['session_id'] ?? null,
+       'method'     => $resp['mfa']['method'] ?? 'email',
+       'expires_at' => $resp['mfa']['expires_at'] ?? null,
+       'prefill'    => [
+        'scope'      => 'partner',
+        'email'      => $resp['auth']['email'] ?? $email,
+        'partner_id' => $resp['auth']['partner_id'] ?? null,
+        'role'       => 'bayi',
+       ],
+      ];
+      safe_redirect(url('auth/verify.php'));
     }
+
+    // token geldiyse güvenli şekilde bayi paneline
+    save_tokens_and_user($resp, ['email' => $email, 'role' => 'bayi']);
+    // ek kontrol: /me partner mi?
+    try {
+      $me = api_me($_SESSION['accessToken']);
+      if (($me['userType'] ?? null) !== 'partner') {
+       // muhtemelen yanlış; güvenlik için iptal edip uyaralım
+       $_SESSION = [];
+       if (session_id()) session_destroy();
+       session_start();
+       $error = 'Bu kullanıcı bayi hesabı değil.';
+      } else {
+       redirect_bayi();
+      }
+    } catch (Throwable $em) {
+      redirect_bayi();
+    }
+
+   } catch (Throwable $ePartner) {
+    $error = $ePartner->getMessage() ?: 'Giriş başarısız.';
+    _dbg('ERROR: ' . $error);
+   }
   }
 }
 ?>
@@ -358,7 +311,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST'){
         </svg>
       </div>
       <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Hoş Geldiniz</h1>
-      <p class="text-sm sm:text-base text-gray-600">Admin ve Bayi Yönetim Paneli</p>
+      <p class="text-sm sm:text-base text-gray-600">Bayi Yönetim Paneli</p>
     </div>
 
     <!-- Kart -->
@@ -375,18 +328,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST'){
           <div class="text-red-500 text-sm mb-2"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
         <?php endif; ?>
 
-        <!-- Giriş Tipi -->
-        <div>
-          <label class="block text-gray-700 text-sm font-medium mb-3">Giriş Tipi</label>
-          <div class="flex space-x-3">
-            <button type="button"
-              class="user-type-btn flex-1 py-3 px-4 bg-blue-50 text-blue-600 text-sm rounded-lg border border-blue-200 transition-all duration-200 hover:bg-blue-100 font-medium"
-              data-type="admin">Admin</button>
-            <button type="button"
-              class="user-type-btn flex-1 py-3 px-4 bg-gray-50 text-gray-600 text-sm rounded-lg border border-gray-200 transition-all duration-200 hover:bg-gray-100 font-medium"
-              data-type="bayi">Bayi</button>
-          </div>
-        </div>
+   
 
         <!-- E-posta -->
         <div>
@@ -498,17 +440,18 @@ if ($_SERVER['REQUEST_METHOD']==='POST'){
 
         <!-- Güvenlik (MFA) Tercihi -->
         <div>
-          <label class="block text-gray-700 text-sm font-medium mb-3">Güvenlik (MFA)</label>
+          <label class="block text-gray-700 text-sm font-medium mb-3">Güvenlik (MFA) *</label>
           <div class="flex items-center gap-4 text-sm">
             <label class="inline-flex items-center gap-2">
-              <input type="radio" name="mfaPref" id="mfaEmail" value="email">
-              <span>E-posta ile MFA (önerilir)</span>
+              <input type="radio" name="mfaPref" id="mfaEmail" value="email" required checked>
+              <span>E-posta ile MFA</span>
             </label>
             <label class="inline-flex items-center gap-2">
-              <input type="radio" name="mfaPref" id="mfaNone" value="none" checked>
-              <span>Şimdilik yok</span>
+              <input type="radio" name="mfaPref" id="mfaSms" value="sms" required>
+              <span>SMS ile MFA</span>
             </label>
           </div>
+          <div id="mfaPref-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
         </div>
 
         <div>
