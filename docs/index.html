@@ -3,10 +3,101 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>İş Ortaklar Paneli – Önizleme</title>
+  <title>İş Ortaklar Paneli – Kod Önizleme</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+  <style>
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .wrap{display:flex;height:100vh}
+    .tree{width:340px;overflow:auto;border-right:1px solid #eee;padding:12px}
+    .viewer{flex:1;overflow:auto}
+    .file{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 0}
+    .file a{color:#2563eb;text-decoration:none}
+    .file a:hover{text-decoration:underline}
+    pre{margin:0;padding:18px}
+    header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding:10px 14px;background:#fafafa}
+    .muted{color:#777}
+    .badge{font-size:12px;padding:2px 6px;border:1px solid #ddd;border-radius:999px}
+  </style>
 </head>
 <body>
-  <h1>Statik Önizleme</h1>
-  <p>Bu sayfa GitHub Pages üzerinde yayınlandı. PHP çalışmaz; sadece HTML/JS gösterilir.</p>
+<div class="wrap">
+  <aside class="tree">
+    <h3>PHP Dosyaları</h3>
+    <div id="list" class="muted">Yükleniyor…</div>
+    <p class="muted" style="margin-top:12px">Not: Kodlar ham olarak gösterilir; PHP <strong>çalışmaz</strong>.</p>
+  </aside>
+  <main class="viewer">
+    <header>
+      <div id="filename" class="muted">Dosya seçin…</div>
+      <a id="rawlink" class="badge" href="#" target="_blank" rel="noopener">Raw</a>
+    </header>
+    <pre><code id="code" class="language-php"></code></pre>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+const OWNER  = "cssyazilim";
+const REPO   = "is-ortaklar-paneli";
+const BRANCH = "main";
+
+const listEl = document.getElementById("list");
+const codeEl = document.getElementById("code");
+const fileEl = document.getElementById("filename");
+const rawEl  = document.getElementById("rawlink");
+
+function langFromExt(path){
+  const ext = path.split(".").pop().toLowerCase();
+  const map = {php:"php", js:"javascript", ts:"typescript", css:"css", html:"xml", md:"markdown", json:"json", yml:"yaml"};
+  return map[ext] || "plaintext";
+}
+
+async function loadTree(){
+  try{
+    const r = await fetch(https://api.github.com/repos///git/trees/?recursive=1);
+    if(!r.ok) throw new Error("tree failed");
+    const data = await r.json();
+    const files = data.tree.filter(x => x.type==="blob" && x.path.endsWith(".php")).map(x=>x.path).sort();
+    if(!files.length){ listEl.textContent = "Bu repoda .php dosyası bulunamadı."; return; }
+
+    const ul = document.createElement("ul"); ul.style.paddingLeft="18px";
+    files.forEach(p=>{
+      const li = document.createElement("li"); li.className="file";
+      const a = document.createElement("a"); a.href="#"; a.textContent=p;
+      a.addEventListener("click", e=>{ e.preventDefault(); loadFile(p); });
+      li.appendChild(a); ul.appendChild(li);
+    });
+    listEl.replaceChildren(ul);
+
+    // ilk dosyayı aç
+    loadFile(files[0]);
+  }catch(e){
+    listEl.textContent = "Liste alınamadı.";
+    console.error(e);
+  }
+}
+
+async function loadFile(path){
+  fileEl.textContent = path;
+  rawEl.href = https://raw.githubusercontent.com////;
+  codeEl.className = ""; // reset
+  codeEl.textContent = "Yükleniyor…";
+
+  try{
+    const r = await fetch(rawEl.href);
+    if(!r.ok) throw new Error("raw failed");
+    const txt = await r.text();
+    const lang = langFromExt(path);
+    codeEl.className = "language-" + lang;
+    codeEl.textContent = txt;
+    hljs.highlightElement(codeEl);
+  }catch(e){
+    codeEl.textContent = "Dosya yüklenemedi.";
+    console.error(e);
+  }
+}
+
+loadTree();
+</script>
 </body>
 </html>
