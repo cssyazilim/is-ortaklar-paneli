@@ -3,15 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>İş Ortaklar Paneli – Demo</title>
+  <title>İş Ortaklar Paneli – Statik Önizleme</title>
 
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- İsteğe bağlı özel CSS'in varsa: -->
-  <!-- <link rel="stylesheet" href="./css/custom.css"> -->
   <style>
     .card-shadow{ box-shadow: 0 10px 20px rgba(2,6,23,.06); }
+    .badge{font-size:12px;padding:.25rem .5rem;border:1px solid #e5e7eb;border-radius:999px}
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex items-center justify-center p-2 sm:p-4">
@@ -26,102 +25,306 @@
       </div>
       <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Hoş Geldiniz</h1>
       <p class="text-sm sm:text-base text-gray-600">Bayi Yönetim Paneli (Statik Önizleme)</p>
+      <p class="mt-2 text-amber-600 text-xs">Bu sayfa GitHub Pages üzerinde çalışır; <b>PHP çalışmaz</b>.</p>
     </div>
 
     <!-- Kart -->
     <div class="bg-white rounded-xl sm:rounded-2xl p-6 sm:p-8 card-shadow border border-gray-100">
-      <!-- Tab -->
+
+      <!-- Tablar -->
       <div class="flex mb-6 sm:mb-8 bg-gray-100 rounded-lg p-1">
         <button id="loginTab" class="flex-1 py-3 px-4 rounded-md text-blue-600 text-sm sm:text-base font-medium transition-all duration-200 bg-white shadow-sm">Giriş Yap</button>
         <button id="registerTab" class="flex-1 py-3 px-4 rounded-md text-gray-600 text-sm sm:text-base font-medium transition-all duration-200 hover:text-gray-900">Kayıt Ol</button>
       </div>
 
-      <!-- GİRİŞ FORMU (statik) -->
+      <!-- GİRİŞ FORMU -->
       <form id="loginForm" class="space-y-4">
-        <div class="text-amber-600 text-sm">
-          Bu sayfa GitHub Pages üzerinde statik önizlemedir; PHP çalışmaz.
-        </div>
-
         <div>
           <label class="block text-gray-700 text-sm font-medium mb-2">E-posta / Kullanıcı Adı</label>
           <input type="text" id="loginEmail" required
             class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-500 input-focus focus:border-blue-500 focus:bg-white focus:outline-none transition-all duration-200 text-sm sm:text-base"
             placeholder="ornek@email.com">
+          <div id="loginEmail-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
         </div>
 
         <div class="relative">
           <input type="password" id="loginPassword" required
             class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-500 input-focus focus:border-blue-500 focus:bg-white focus:outline-none transition-all duration-200 pr-12 text-sm sm:text-base"
             placeholder="••••••••" autocomplete="current-password">
-          <button type="button" id="togglePass"
-            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
-            göz
-          </button>
+          <button type="button" data-toggle="loginPassword"
+            class="toggle-pass absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Şifre görünürlüğünü değiştir">göz</button>
+          <div id="loginPassword-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
         </div>
 
         <input type="hidden" id="userTypeInput" value="admin">
 
-        <button type="submit" class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 text-sm sm:text-base">
-          Giriş Yap (Demo)
-        </button>
+        <div class="flex items-center justify-between">
+          <span class="badge">Demo</span>
+          <button type="submit" class="bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 text-sm sm:text-base">
+            Giriş Yap
+          </button>
+        </div>
       </form>
 
-      <!-- KAYIT FORMU (statik mock) -->
+      <!-- KAYIT FORMU -->
       <div id="registerForm" class="space-y-5 hidden">
-        <div class="text-sm text-gray-600">Bu bölüm demo amaçlıdır; form gönderimleri backend’e gitmez.</div>
+        <div id="registerError" class="text-red-600 text-sm mb-2 hidden"></div>
+
+        <!-- Kayıt tipi -->
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-3">Kayıt Tipi</label>
+          <div class="flex gap-3">
+            <button type="button" class="register-type-btn flex-1 py-3 px-4 bg-blue-50 text-blue-600 text-sm rounded-lg border border-blue-200 transition-all duration-200 hover:bg-blue-100 font-medium" data-type="sirket">Şirket</button>
+            <button type="button" class="register-type-btn flex-1 py-3 px-4 bg-gray-50 text-gray-600 text-sm rounded-lg border border-gray-200 transition-all duration-200 hover:bg-gray-100 font-medium" data-type="sahis">Şahıs</button>
+          </div>
+        </div>
+
+        <!-- Şirket alanları -->
+        <div id="companyFields" class="space-y-4">
+          <div>
+            <label class="block text-gray-700 text-sm font-medium mb-2">Şirket Adı *</label>
+            <input type="text" id="companyName" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg" placeholder="ABC Şirketi Ltd. Şti.">
+            <div id="companyName-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
+          </div>
+          <div>
+            <label class="block text-gray-700 text-sm font-medium mb-2">Vergi Numarası *</label>
+            <input type="text" id="taxNumber" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg" placeholder="1234567890">
+            <div id="taxNumber-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
+          </div>
+        </div>
+
+        <!-- Şahıs alanları -->
+        <div id="personalFields" class="space-y-4 hidden">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-gray-700 text-sm font-medium mb-2">Ad *</label>
+              <input type="text" id="firstName" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg" placeholder="Adınız">
+              <div id="firstName-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
+            </div>
+            <div>
+              <label class="block text-gray-700 text-sm font-medium mb-2">Soyad *</label>
+              <input type="text" id="lastName" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg" placeholder="Soyadınız">
+              <div id="lastName-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
+            </div>
+          </div>
+          <div>
+            <label class="block text-gray-700 text-sm font-medium mb-2">TC Kimlik No *</label>
+            <input type="text" id="tcNumber" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg" placeholder="12345678901">
+            <div id="tcNumber-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
+          </div>
+        </div>
+
+        <!-- Ortak alanlar -->
         <div>
           <label class="block text-gray-700 text-sm font-medium mb-2">E-posta *</label>
           <input type="email" id="registerEmail" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg" placeholder="ornek@email.com">
+          <div id="registerEmail-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
         </div>
+
         <div>
           <label class="block text-gray-700 text-sm font-medium mb-2">Telefon *</label>
           <input type="tel" id="phone" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg" placeholder="+90 (555) 123 45 67">
+          <div id="phone-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
         </div>
-        <button id="registerBtn" class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200">
-          Kayıt Ol (Demo)
+
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-2">Adres *</label>
+          <textarea id="address" rows="2" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg" placeholder="Adres"></textarea>
+          <div id="address-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
+        </div>
+
+        <!-- MFA -->
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-3">Güvenlik (MFA) *</label>
+          <div class="flex items-center gap-4 text-sm">
+            <label class="inline-flex items-center gap-2">
+              <input type="radio" name="mfaPref" id="mfaEmail" value="email" required checked>
+              <span>E-posta</span>
+            </label>
+            <label class="inline-flex items-center gap-2">
+              <input type="radio" name="mfaPref" id="mfaSms" value="sms" required>
+              <span>SMS</span>
+            </label>
+          </div>
+          <div id="mfaPref-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
+        </div>
+
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-2">Şifre *</label>
+          <div class="relative">
+            <input type="password" id="registerPassword" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg pr-12" placeholder="••••••••">
+            <button type="button" data-toggle="registerPassword" class="toggle-pass absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">göz</button>
+          </div>
+          <div id="registerPassword-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
+        </div>
+
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-2">Şifre Tekrar *</label>
+          <div class="relative">
+            <input type="password" id="confirmPassword" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg pr-12" placeholder="••••••••">
+            <button type="button" data-toggle="confirmPassword" class="toggle-pass absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">göz</button>
+          </div>
+          <div id="confirmPassword-error" class="text-red-500 text-xs mt-1 hidden">Bu alanın doldurulması zorunludur</div>
+        </div>
+
+        <!-- KVKK / Sözleşme -->
+        <div class="space-y-4 pt-2">
+          <div>
+            <label class="flex items-start">
+              <input type="checkbox" id="kvkkCheck" class="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded mt-1">
+              <span class="ml-3 text-sm text-gray-600 leading-relaxed">
+                KVKK Aydınlatma Metni'ni okudum ve kabul ediyorum. *
+              </span>
+            </label>
+            <div id="kvkkCheck-error" class="text-red-500 text-xs mt-1 ml-7 hidden">Bu onayın verilmesi zorunludur</div>
+          </div>
+          <div>
+            <label class="flex items-start">
+              <input type="checkbox" id="contractCheck" class="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded mt-1">
+              <span class="ml-3 text-sm text-gray-600 leading-relaxed">
+                Kullanım Sözleşmesi'ni okudum ve kabul ediyorum. *
+              </span>
+            </label>
+            <div id="contractCheck-error" class="text-red-500 text-xs mt-1 ml-7 hidden">Bu onayın verilmesi zorunludur</div>
+          </div>
+        </div>
+
+        <button id="registerBtn" type="button" class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 text-sm sm:text-base mt-2">
+          Kayıt Ol
         </button>
       </div>
     </div>
 
+    <!-- Alt bilgi -->
     <div class="text-center mt-8">
-      <p class="text-gray-500 text-sm">
-        © 2024 Tüm hakları saklıdır.
-      </p>
+      <p class="text-gray-500 text-sm">© 2024 Tüm hakları saklıdır.</p>
     </div>
   </div>
 
-  <!-- ufak demo JS -->
-  <script>
-    const loginTab = document.getElementById('loginTab');
-    const registerTab = document.getElementById('registerTab');
-    const loginForm = document.getElementById('loginForm');
-    const regForm = document.getElementById('registerForm');
+  <!-- Modal -->
+  <div id="modalOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl p-6 max-w-md w-full max-h-96 overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h3 id="modalTitle" class="text-xl font-bold text-gray-800"></h3>
+        <button id="modalClose" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+      </div>
+      <div id="modalContent" class="text-gray-600 text-sm leading-relaxed"></div>
+      <button id="modalClose2" class="w-full mt-4 bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">
+        Kapat
+      </button>
+    </div>
+  </div>
 
-    loginTab.addEventListener('click', () => {
+  <!-- JS -->
+  <script>
+    /* Util */
+    const $ = (s, r=document)=>r.querySelector(s);
+    const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
+    const show = (el)=>{ el.classList.remove('hidden'); };
+    const hide = (el)=>{ el.classList.add('hidden'); };
+    const showErr = (id, msg)=>{ const e = $('#'+id+'-error'); if(e){ if(msg) e.textContent = msg; e.classList.remove('hidden'); } };
+    const clearErr = (id)=>{ const e = $('#'+id+'-error'); if(e) e.classList.add('hidden'); };
+    const togglePass = (id)=>{ const i = $('#'+id); i.type = (i.type==='password'?'text':'password'); };
+
+    /* Modal */
+    function openModal(title, html){
+      $('#modalTitle').textContent = title || '';
+      $('#modalContent').innerHTML = html || '';
+      const o = $('#modalOverlay'); o.classList.remove('hidden'); o.classList.add('flex');
+    }
+    function closeModal(){
+      const o = $('#modalOverlay'); o.classList.add('hidden'); o.classList.remove('flex');
+    }
+    $('#modalClose').onclick = $('#modalClose2').onclick = closeModal;
+
+    /* Tabs */
+    const loginTab = $('#loginTab'), registerTab = $('#registerTab');
+    const loginForm = $('#loginForm'), regForm = $('#registerForm');
+
+    loginTab.onclick = () => {
       loginTab.classList.add('text-blue-600','bg-white','shadow-sm');
       registerTab.classList.remove('text-blue-600','bg-white','shadow-sm'); registerTab.classList.add('text-gray-600');
-      loginForm.classList.remove('hidden');
-      regForm.classList.add('hidden');
-    });
-    registerTab.addEventListener('click', () => {
+      show(loginForm); hide(regForm);
+    };
+    registerTab.onclick = () => {
       registerTab.classList.add('text-blue-600','bg-white','shadow-sm');
       loginTab.classList.remove('text-blue-600','bg-white','shadow-sm'); loginTab.classList.add('text-gray-600');
-      regForm.classList.remove('hidden');
-      loginForm.classList.add('hidden');
-    });
-
-    document.getElementById('togglePass').onclick = () => {
-      const i = document.getElementById('loginPassword');
-      i.type = i.type === 'password' ? 'text' : 'password';
+      show(regForm); hide(loginForm);
     };
 
-    // Formlar: server'a gitmeyip demo mesajı gösterir
-    loginForm.addEventListener('submit', (e) => {
+    /* Şifre göz düğmeleri */
+    $$('.toggle-pass').forEach(b => b.addEventListener('click', () => togglePass(b.dataset.toggle)));
+
+    /* Kayıt tipi butonları */
+    (function initRegisterTypeToggle(){
+      const typeBtns = $$('.register-type-btn');
+      const company = $('#companyFields'), person = $('#personalFields');
+
+      function setActive(btn){
+        typeBtns.forEach(b=>{
+          b.classList.remove('bg-blue-50','text-blue-600','border-blue-200');
+          b.classList.add('bg-gray-50','text-gray-600','border-gray-200');
+        });
+        btn.classList.add('bg-blue-50','text-blue-600','border-blue-200');
+        btn.classList.remove('bg-gray-50','text-gray-600','border-gray-200');
+
+        if (btn.dataset.type === 'sahis'){ show(person); hide(company); }
+        else { show(company); hide(person); }
+      }
+
+      setActive(typeBtns[0]); // default: şirket
+      typeBtns.forEach(btn => btn.addEventListener('click', ()=> setActive(btn)));
+    })();
+
+    /* Login DEMO */
+    loginForm.addEventListener('submit', e=>{
       e.preventDefault();
-      alert('Bu statik bir önizlemedir. PHP çalışmıyor. Gerçek giriş, sunucuda yapılır.');
+      const email = $('#loginEmail').value.trim();
+      const pass = $('#loginPassword').value;
+      if(!email) return showErr('loginEmail');
+      if(!pass)  return showErr('loginPassword');
+      openModal('Demo', '<p>Statik önizlemedesiniz. Gerçek giriş PHP ile sunucuda yapılır.</p>');
     });
-    document.getElementById('registerBtn').addEventListener('click', () => {
-      alert('Demo: Kayıt formu gönderilmedi (statik önizleme).');
+
+    /* Register DEMO */
+    $('#registerBtn').addEventListener('click', ()=>{
+      let valid = true;
+      const get = id => $('#'+id)?.value?.trim() || '';
+
+      const activeTypeBtn = $$('.register-type-btn').find(b=> b.classList.contains('bg-blue-50'));
+      const legal_type = (activeTypeBtn?.dataset.type === 'sahis') ? 'Sahis' : 'Sirket';
+
+      const email = get('registerEmail'); if(!email){ showErr('registerEmail'); valid=false; }
+      const phone = get('phone'); if(!phone){ showErr('phone'); valid=false; }
+      const address = get('address'); if(!address){ showErr('address'); valid=false; }
+
+      const pass1 = $('#registerPassword').value, pass2 = $('#confirmPassword').value;
+      if(!pass1){ showErr('registerPassword'); valid=false; }
+      if(!pass2){ showErr('confirmPassword'); valid=false; }
+      if(pass1 && pass2 && pass1!==pass2){ showErr('confirmPassword','Şifreler uyuşmuyor'); valid=false; }
+
+      if(!$('#kvkkCheck').checked){ showErr('kvkkCheck'); valid=false; }
+      if(!$('#contractCheck').checked){ showErr('contractCheck'); valid=false; }
+
+      const payload = { type:'Bayi', legal_type, email, phone, address, mfa_method: ($('#mfaEmail').checked?'email':'sms') };
+
+      if(legal_type==='Sirket'){
+        const company_name = get('companyName'); if(!company_name){ showErr('companyName'); valid=false; }
+        const vkn = get('taxNumber').replace(/\D/g,''); if(!/^\d{10}$/.test(vkn)){ showErr('taxNumber','10 haneli VKN girin'); valid=false; }
+        Object.assign(payload,{company_name, vkn});
+      }else{
+        const first_name = get('firstName'); if(!first_name){ showErr('firstName'); valid=false; }
+        const last_name  = get('lastName'); if(!last_name){ showErr('lastName'); valid=false; }
+        const tckn = get('tcNumber').replace(/\D/g,''); if(!/^\d{11}$/.test(tckn)){ showErr('tcNumber','11 haneli TCKN girin'); valid=false; }
+        Object.assign(payload,{first_name,last_name,tckn});
+      }
+      if(!valid) return;
+
+      openModal('Kayıt (Demo)', `
+        <p>Bu bir <b>statik önizleme</b>dir. Aşağıdaki veriler normalde backend'e gönderilirdi:</p>
+        <pre class="mt-3 text-xs bg-gray-50 border border-gray-200 rounded p-3 overflow-auto">${JSON.stringify(payload,null,2)}</pre>
+      `);
     });
   </script>
 </body>
