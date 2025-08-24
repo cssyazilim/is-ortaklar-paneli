@@ -3,101 +3,126 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>İş Ortaklar Paneli – Kod Önizleme</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+  <title>İş Ortaklar Paneli – Demo</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- İsteğe bağlı özel CSS'in varsa: -->
+  <!-- <link rel="stylesheet" href="./css/custom.css"> -->
   <style>
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
-    .wrap{display:flex;height:100vh}
-    .tree{width:340px;overflow:auto;border-right:1px solid #eee;padding:12px}
-    .viewer{flex:1;overflow:auto}
-    .file{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 0}
-    .file a{color:#2563eb;text-decoration:none}
-    .file a:hover{text-decoration:underline}
-    pre{margin:0;padding:18px}
-    header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding:10px 14px;background:#fafafa}
-    .muted{color:#777}
-    .badge{font-size:12px;padding:2px 6px;border:1px solid #ddd;border-radius:999px}
+    .card-shadow{ box-shadow: 0 10px 20px rgba(2,6,23,.06); }
   </style>
 </head>
-<body>
-<div class="wrap">
-  <aside class="tree">
-    <h3>PHP Dosyaları</h3>
-    <div id="list" class="muted">Yükleniyor…</div>
-    <p class="muted" style="margin-top:12px">Not: Kodlar ham olarak gösterilir; PHP <strong>çalışmaz</strong>.</p>
-  </aside>
-  <main class="viewer">
-    <header>
-      <div id="filename" class="muted">Dosya seçin…</div>
-      <a id="rawlink" class="badge" href="#" target="_blank" rel="noopener">Raw</a>
-    </header>
-    <pre><code id="code" class="language-php"></code></pre>
-  </main>
-</div>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-2 sm:p-4">
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script>
-const OWNER  = "cssyazilim";
-const REPO   = "is-ortaklar-paneli";
-const BRANCH = "main";
+  <div class="w-full max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl">
+    <!-- Logo/Başlık -->
+    <div class="text-center mb-6 sm:mb-8">
+      <div class="w-16 h-16 sm:w-20 sm:h-20 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6">
+        <svg class="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M10 2L3 7v11a1 1 0 001 1h3v-6h6v6h3a1 1 0 001-1V7l-7-5z"/>
+        </svg>
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Hoş Geldiniz</h1>
+      <p class="text-sm sm:text-base text-gray-600">Bayi Yönetim Paneli (Statik Önizleme)</p>
+    </div>
 
-const listEl = document.getElementById("list");
-const codeEl = document.getElementById("code");
-const fileEl = document.getElementById("filename");
-const rawEl  = document.getElementById("rawlink");
+    <!-- Kart -->
+    <div class="bg-white rounded-xl sm:rounded-2xl p-6 sm:p-8 card-shadow border border-gray-100">
+      <!-- Tab -->
+      <div class="flex mb-6 sm:mb-8 bg-gray-100 rounded-lg p-1">
+        <button id="loginTab" class="flex-1 py-3 px-4 rounded-md text-blue-600 text-sm sm:text-base font-medium transition-all duration-200 bg-white shadow-sm">Giriş Yap</button>
+        <button id="registerTab" class="flex-1 py-3 px-4 rounded-md text-gray-600 text-sm sm:text-base font-medium transition-all duration-200 hover:text-gray-900">Kayıt Ol</button>
+      </div>
 
-function langFromExt(path){
-  const ext = path.split(".").pop().toLowerCase();
-  const map = {php:"php", js:"javascript", ts:"typescript", css:"css", html:"xml", md:"markdown", json:"json", yml:"yaml"};
-  return map[ext] || "plaintext";
-}
+      <!-- GİRİŞ FORMU (statik) -->
+      <form id="loginForm" class="space-y-4">
+        <div class="text-amber-600 text-sm">
+          Bu sayfa GitHub Pages üzerinde statik önizlemedir; PHP çalışmaz.
+        </div>
 
-async function loadTree(){
-  try{
-    const r = await fetch(https://api.github.com/repos///git/trees/?recursive=1);
-    if(!r.ok) throw new Error("tree failed");
-    const data = await r.json();
-    const files = data.tree.filter(x => x.type==="blob" && x.path.endsWith(".php")).map(x=>x.path).sort();
-    if(!files.length){ listEl.textContent = "Bu repoda .php dosyası bulunamadı."; return; }
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-2">E-posta / Kullanıcı Adı</label>
+          <input type="text" id="loginEmail" required
+            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-500 input-focus focus:border-blue-500 focus:bg-white focus:outline-none transition-all duration-200 text-sm sm:text-base"
+            placeholder="ornek@email.com">
+        </div>
 
-    const ul = document.createElement("ul"); ul.style.paddingLeft="18px";
-    files.forEach(p=>{
-      const li = document.createElement("li"); li.className="file";
-      const a = document.createElement("a"); a.href="#"; a.textContent=p;
-      a.addEventListener("click", e=>{ e.preventDefault(); loadFile(p); });
-      li.appendChild(a); ul.appendChild(li);
+        <div class="relative">
+          <input type="password" id="loginPassword" required
+            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-500 input-focus focus:border-blue-500 focus:bg-white focus:outline-none transition-all duration-200 pr-12 text-sm sm:text-base"
+            placeholder="••••••••" autocomplete="current-password">
+          <button type="button" id="togglePass"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+            göz
+          </button>
+        </div>
+
+        <input type="hidden" id="userTypeInput" value="admin">
+
+        <button type="submit" class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 text-sm sm:text-base">
+          Giriş Yap (Demo)
+        </button>
+      </form>
+
+      <!-- KAYIT FORMU (statik mock) -->
+      <div id="registerForm" class="space-y-5 hidden">
+        <div class="text-sm text-gray-600">Bu bölüm demo amaçlıdır; form gönderimleri backend’e gitmez.</div>
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-2">E-posta *</label>
+          <input type="email" id="registerEmail" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg" placeholder="ornek@email.com">
+        </div>
+        <div>
+          <label class="block text-gray-700 text-sm font-medium mb-2">Telefon *</label>
+          <input type="tel" id="phone" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg" placeholder="+90 (555) 123 45 67">
+        </div>
+        <button id="registerBtn" class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200">
+          Kayıt Ol (Demo)
+        </button>
+      </div>
+    </div>
+
+    <div class="text-center mt-8">
+      <p class="text-gray-500 text-sm">
+        © 2024 Tüm hakları saklıdır.
+      </p>
+    </div>
+  </div>
+
+  <!-- ufak demo JS -->
+  <script>
+    const loginTab = document.getElementById('loginTab');
+    const registerTab = document.getElementById('registerTab');
+    const loginForm = document.getElementById('loginForm');
+    const regForm = document.getElementById('registerForm');
+
+    loginTab.addEventListener('click', () => {
+      loginTab.classList.add('text-blue-600','bg-white','shadow-sm');
+      registerTab.classList.remove('text-blue-600','bg-white','shadow-sm'); registerTab.classList.add('text-gray-600');
+      loginForm.classList.remove('hidden');
+      regForm.classList.add('hidden');
     });
-    listEl.replaceChildren(ul);
+    registerTab.addEventListener('click', () => {
+      registerTab.classList.add('text-blue-600','bg-white','shadow-sm');
+      loginTab.classList.remove('text-blue-600','bg-white','shadow-sm'); loginTab.classList.add('text-gray-600');
+      regForm.classList.remove('hidden');
+      loginForm.classList.add('hidden');
+    });
 
-    // ilk dosyayı aç
-    loadFile(files[0]);
-  }catch(e){
-    listEl.textContent = "Liste alınamadı.";
-    console.error(e);
-  }
-}
+    document.getElementById('togglePass').onclick = () => {
+      const i = document.getElementById('loginPassword');
+      i.type = i.type === 'password' ? 'text' : 'password';
+    };
 
-async function loadFile(path){
-  fileEl.textContent = path;
-  rawEl.href = https://raw.githubusercontent.com////;
-  codeEl.className = ""; // reset
-  codeEl.textContent = "Yükleniyor…";
-
-  try{
-    const r = await fetch(rawEl.href);
-    if(!r.ok) throw new Error("raw failed");
-    const txt = await r.text();
-    const lang = langFromExt(path);
-    codeEl.className = "language-" + lang;
-    codeEl.textContent = txt;
-    hljs.highlightElement(codeEl);
-  }catch(e){
-    codeEl.textContent = "Dosya yüklenemedi.";
-    console.error(e);
-  }
-}
-
-loadTree();
-</script>
+    // Formlar: server'a gitmeyip demo mesajı gösterir
+    loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      alert('Bu statik bir önizlemedir. PHP çalışmıyor. Gerçek giriş, sunucuda yapılır.');
+    });
+    document.getElementById('registerBtn').addEventListener('click', () => {
+      alert('Demo: Kayıt formu gönderilmedi (statik önizleme).');
+    });
+  </script>
 </body>
 </html>
