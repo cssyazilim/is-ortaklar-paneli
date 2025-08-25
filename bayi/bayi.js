@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', function () {
   showSection('dashboard'); // açılışta dashboard
 });
 
-// Fonksiyonları globalde kullan
+// Fonksiyonlar globalde 
 window.toggleMobileMenu = toggleMobileMenu;
 window.toggleUserMenu   = toggleUserMenu;
 window.logout           = logout;
