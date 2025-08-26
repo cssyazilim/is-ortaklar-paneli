@@ -17,9 +17,16 @@ const ROLE_TO_ROUTE = [
   'partner_user' => 'bayi/bayi.php',
 ];
 
-function asset_url(string $path): string { return BASE . 'assets/' . ltrim($path, '/'); }
-function url(string $path): string { return BASE . ltrim($path, '/'); }
+
 function e($str){ return htmlspecialchars($str ?? '', ENT_QUOTES, 'UTF-8'); }
+
+if (!function_exists('url')) {
+  function url(string $p){ return BASE . ltrim($p, '/'); }
+}
+if (!function_exists('asset_url')) {
+  function asset_url(string $p){ return BASE . 'assets/' . ltrim($p,'/'); }
+}
+
 
 function redirect_if_logged_in() {
   if (!empty($_SESSION['user']['role'])) {

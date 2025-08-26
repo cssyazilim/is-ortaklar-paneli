@@ -1,0 +1,15 @@
+/* Kart gölgesi */
+.card-shadow {
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,.25);
+}
+
+/* Odak halinde güzel görünüm */
+.input-focus { transition: box-shadow .2s ease, border-color .2s ease; }
+
+/* Scrollbar gizle (kaydırma devam eder) */
+* { scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar { width: 0; height: 0; }
+
+/* İstersen tüm kaydırmayı tamamen kapat:
+body { overflow: hidden; }
+*/

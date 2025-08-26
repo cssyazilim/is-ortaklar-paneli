@@ -1,8 +1,118 @@
 <?php
+
 session_start();
 if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'bayi') {
   header('Location: /is-ortaklar-paneli/login.php'); exit;
 }
+
+require_once __DIR__ . '/../config/config.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
+
+/* API kökleri */
+if (!defined('API_BASE')) define('API_BASE', 'http://34.44.194.247:3001/api/auth');
+if (!defined('API_ROOT')) define('API_ROOT', preg_replace('~/auth/?$~i','', rtrim(API_BASE,'/')));
+
+/* Basit GET */
+function http_get_json(string $base, string $path, array $headers=[]): array {
+  $url = rtrim($base,'/').'/'.ltrim($path,'/');
+  $ch = curl_init($url);
+  curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER     => array_merge(['Accept: application/json'], $headers),
+    CURLOPT_TIMEOUT        => 20,
+  ]);
+  $raw  = curl_exec($ch);
+  $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+  $err  = curl_error($ch);
+  curl_close($ch);
+  if ($raw === false) throw new RuntimeException('Sunucuya ulaşılamadı: '.$err);
+  $json = json_decode($raw, true);
+  if (!is_array($json)) throw new RuntimeException('Geçersiz yanıt: '.$raw);
+  if ($code < 200 || $code >= 300) {
+    $msg = $json['message'] ?? $json['error'] ?? ('HTTP '.$code);
+    throw new RuntimeException($msg);
+  }
+  return $json;
+}
+
+/* JWT payload'ı doğrulamasız oku (sadece scope kontrolü için) */
+function jwt_payload(string $jwt): array {
+  $p = explode('.', $jwt);
+  if (count($p) < 2) return [];
+  $payload = $p[1] . str_repeat('=', (4 - strlen($p[1]) % 4) % 4);
+  $json = json_decode(base64_decode(strtr($payload, '-_', '+/')), true);
+  return is_array($json) ? $json : [];
+}
+
+/* Status -> rozet metni/renk */
+function status_meta(string $s): array {
+  $s = strtolower($s);
+  if ($s === 'active')   return ['Müşteri Onayladı', 'status-approved bg-green-100 text-green-700'];
+  if ($s === 'pending')  return ['İncelemede',        'status-review bg-yellow-100 text-yellow-700'];
+  if ($s === 'draft')    return ['Teklif Hazır',      'status-ready bg-emerald-100 text-emerald-700'];
+  if ($s === 'rejected' || $s === 'passive') return ['Reddedildi','bg-red-100 text-red-700'];
+  return ['İncelemede', 'status-review bg-yellow-100 text-yellow-700'];
+}
+
+/* Partner scope’lu token seç */
+$tokenUser     = $_SESSION['accessToken']        ?? null;
+$tokenPartner1 = $_SESSION['partnerAccessToken'] ?? null;
+$tokenPartner2 = $_SESSION['bayiAccessToken']    ?? null;
+
+$token = null;
+foreach ([$tokenPartner1, $tokenPartner2, $tokenUser] as $cand) {
+  if (!$cand) continue;
+  $p = jwt_payload($cand);
+  $scope = $p['scope'] ?? $p['scopes'] ?? '';
+  if ($scope === 'partner' || (is_array($scope) && in_array('partner', $scope, true))) {
+    $token = $cand; break;
+  }
+}
+
+$apiError = null; $rows = [];
+if (!$token) {
+  $apiError = 'Bu liste için partner (bayi) scope gereklidir. Bayi hesabıyla giriş yapın.';
+} else {
+  try {
+    $headers = ['Authorization: Bearer '.$token];
+    if (!empty($_SESSION['user']['partner_id'])) {
+      $headers[] = 'X-Partner-Id: '.$_SESSION['user']['partner_id']; // API isterse
+    }
+    $resp  = http_get_json(API_ROOT, 'customers', $headers);
+    $items = $resp['items'] ?? [];
+
+    foreach ($items as $it) {
+      $id     = (string)($it['id'] ?? '');
+      $short  = strtoupper(substr(str_replace('-','',$id), 0, 8));
+      $no     = $short ? ('CUS-'.$short) : 'CUS-XXXXXX';
+      $title  = $it['title'] ?? ($it['name'] ?? '-');
+      $tarih  = $it['created_at'] ?? $it['updated_at'] ?? null;
+      $status = $it['status'] ?? 'pending';
+      [$label,$cls] = status_meta($status);
+
+      $rows[] = [
+        'no'     => $no,
+        'musteri'=> $title,
+        'tutar'  => null,                 // customers API tutar vermiyor
+        'tarih'  => $tarih,
+        'label'  => $label,
+        'cls'    => $cls,
+        'id'     => $id,
+      ];
+    }
+  } catch (Throwable $e) {
+    $apiError = $e->getMessage();
+  }
+}
+
+/* TR tarih helper */
+function tr_date(?string $iso): string {
+  if (!$iso) return '-';
+  $t = strtotime($iso); if (!$t) return '-';
+  return date('d.m.Y', $t);
+}
+
+
 ?>
 <!DOCTYPE html>
 <html lang="tr">
@@ -46,7 +156,17 @@ if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'bayi') {
                     <div class="hidden sm:flex sm:items-center relative">
                         <button onclick="toggleUserMenu()" class="text-xs sm:text-sm text-gray-600 hover:text-gray-800 transition-colors">Hoş geldiniz, <strong>Ahmet Bayi</strong></button>
                         <div id="user-menu" class="hidden absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
-                            <div class="py-1">
+                        
+                            <div class="py-2">
+                                    <a href="profile.php" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                                        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                d="M5.121 17.804A13.937 13.937 0 0112 15c2.5 0 4.847.655 6.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        Profilim
+                                 </a>
+                            </div>
+                           <div class="py-1">
                                 <button onclick="logout()" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
                                     <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
@@ -54,6 +174,7 @@ if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'bayi') {
                                     Çıkış Yap
                                 </button>
                             </div>
+                            
                         </div>
                     </div>
                 </div>
@@ -264,91 +385,87 @@ if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'bayi') {
             </div>
         </div>
 
-        <!-- Quotes Section -->
-        <div id="quotes" class="section hidden">
-            <div class="mb-8">
-                <h2 class="text-3xl font-bold text-gray-900 mb-2">Teklif Yönetimi</h2>
-                <p class="text-gray-600">Teklif talepleri, hazırlama ve takip işlemleri</p>
-            </div>
+      <!-- Quotes Section -->
+<div id="quotes" class="section hidden">
+  <div class="mb-8">
+    <h2 class="text-3xl font-bold text-gray-900 mb-2">Teklif Yönetimi</h2>
+    <p class="text-gray-600">Teklif talepleri, hazırlama ve takip işlemleri</p>
+  </div>
 
-            <!-- Quote Actions -->
-            <div class="bg-white rounded-xl shadow-md p-6 border border-gray-100 mb-6">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-lg font-semibold text-gray-900">Teklif İşlemleri</h3>
-                    <button onclick="createNewQuote()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                        Yeni Teklif Oluştur
-                    </button>
-                </div>
-            </div>
+  <!-- Quote Actions -->
+  <div class="bg-white rounded-xl shadow-md p-6 border border-gray-100 mb-6">
+    <div class="flex justify-between items-center">
+      <h3 class="text-lg font-semibold text-gray-900">Teklif İşlemleri</h3>
+      <button onclick="createNewQuote()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+        Yeni Teklif Oluştur
+      </button>
+    </div>
+  </div>
 
-            <!-- Quotes List -->
-            <div class="bg-white rounded-xl shadow-md border border-gray-100">
-                <div class="p-6 border-b border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-900">Teklif Listesi</h3>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full min-w-[600px]">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teklif No</th>
-                                <th class="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri</th>
-                                <th class="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
-                                <th class="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durum</th>
-                                <th class="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Tarih</th>
-                                <th class="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            <tr>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">TKF-2024-001</td>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">ABC Şirketi</td>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">₺25,000</td>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                                    <span class="px-2 py-1 text-xs font-semibold rounded-full status-ready">Teklif Hazır</span>
-                                </td>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 hidden sm:table-cell">15.01.2024</td>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium">
-                                    <div class="flex flex-col sm:flex-row gap-1 sm:gap-3">
-                                        <button onclick="sendQuoteToCustomer('TKF-2024-001')" class="text-indigo-600 hover:text-indigo-900">Müşteriye Gönder</button>
-                                        <button onclick="editQuote('TKF-2024-001')" class="text-gray-600 hover:text-gray-900">Düzenle</button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">TKF-2024-002</td>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">XYZ Ltd</td>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">₺45,500</td>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                                    <span class="px-2 py-1 text-xs font-semibold rounded-full status-approved">Müşteri Onayladı</span>
-                                </td>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 hidden sm:table-cell">12.01.2024</td>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium">
-                                    <div class="flex flex-col sm:flex-row gap-1 sm:gap-3">
-                                        <button onclick="convertToOrder('TKF-2024-002')" class="text-green-600 hover:text-green-900">Siparişe Dönüştür</button>
-                                        <button onclick="viewQuote('TKF-2024-002')" class="text-gray-600 hover:text-gray-900">Görüntüle</button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">TKF-2024-003</td>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">DEF A.Ş</td>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">₺18,750</td>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                                    <span class="px-2 py-1 text-xs font-semibold rounded-full status-review">İncelemede</span>
-                                </td>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 hidden sm:table-cell">10.01.2024</td>
-                                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium">
-                                    <div class="flex flex-col sm:flex-row gap-1 sm:gap-3">
-                                        <button onclick="editQuote('TKF-2024-003')" class="text-indigo-600 hover:text-indigo-900">Düzenle</button>
-                                        <button onclick="viewQuote('TKF-2024-003')" class="text-gray-600 hover:text-gray-900">Görüntüle</button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+  <!-- Quotes List -->
+  <div class="bg-white rounded-xl shadow-md border border-gray-100">
+    <div class="p-6 border-b border-gray-200">
+      <h3 class="text-lg font-semibold text-gray-900">Teklif Listesi</h3>
+      <?php if ($apiError): ?>
+        <p class="mt-2 text-sm text-red-600">API Hatası: <?= htmlspecialchars($apiError, ENT_QUOTES, 'UTF-8') ?></p>
+      <?php endif; ?>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[600px]">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teklif No</th>
+            <th class="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri</th>
+            <th class="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
+            <th class="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durum</th>
+            <th class="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Tarih</th>
+            <th class="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <?php if (!empty($rows)): ?>
+            <?php foreach ($rows as $r): ?>
+              <tr>
+                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">
+                  <?= htmlspecialchars($r['no'], ENT_QUOTES, 'UTF-8') ?>
+                </td>
+                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
+                  <?= htmlspecialchars($r['musteri'], ENT_QUOTES, 'UTF-8') ?>
+                </td>
+                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
+                  <?= $r['tutar'] !== null ? '₺'.number_format($r['tutar'],0,',','.') : '-' ?>
+                </td>
+                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                  <span class="px-2 py-1 text-xs font-semibold rounded-full <?= htmlspecialchars($r['cls'], ENT_QUOTES, 'UTF-8') ?>">
+                    <?= htmlspecialchars($r['label'], ENT_QUOTES, 'UTF-8') ?>
+                  </span>
+                </td>
+                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 hidden sm:table-cell">
+                  <?= tr_date($r['tarih']) ?>
+                </td>
+                <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium">
+                  <div class="flex flex-col sm:flex-row gap-1 sm:gap-3">
+                    <button onclick="sendQuoteToCustomer('<?= htmlspecialchars($r['id'], ENT_QUOTES, 'UTF-8') ?>')" class="text-indigo-600 hover:text-indigo-900">Müşteriye Gönder</button>
+                    <button onclick="editQuote('<?= htmlspecialchars($r['id'], ENT_QUOTES, 'UTF-8') ?>')" class="text-gray-600 hover:text-gray-900">Düzenle</button>
+                    <button onclick="viewQuote('<?= htmlspecialchars($r['id'], ENT_QUOTES, 'UTF-8') ?>')" class="text-gray-600 hover:text-gray-900">Görüntüle</button>
+                  </div>
+                </td>
+              </tr>
+            <?php endforeach; ?>
+          <?php else: ?>
+            <tr>
+              <td colspan="6" class="px-6 py-10 text-center text-gray-500">
+                Aradığınız kriterlere uygun teklif bulunamadı
+              </td>
+            </tr>
+          <?php endif; ?>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 
         <!-- Orders Section -->
         <div id="orders" class="section hidden">
