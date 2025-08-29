@@ -5,10 +5,7 @@ require_once __DIR__ . '/_boot.php';
 require_bayi_role();
 require_once __DIR__ . '/../config/config.php';
 
-/* ========= Embed tespiti =========
-   - Doğrudan açılırsa (bu dosya script olarak çalışıyorsa) embed=false
-   - index.php içinden include edilirse embed=true (redirect olmaz)
-*/
+/* ========= Embed tespiti ========= */
 $IS_INCLUDED = (isset($_SERVER['SCRIPT_FILENAME'])
   && realpath(__FILE__) !== false
   && realpath($_SERVER['SCRIPT_FILENAME']) !== realpath(__FILE__));
@@ -48,6 +45,7 @@ if (!function_exists('http_get_json_url')) {
     return $json;
   }
 }
+
 if (!function_exists('partner_bearer')) {
   function partner_bearer(): string {
     foreach ([
@@ -60,6 +58,7 @@ if (!function_exists('partner_bearer')) {
     return '';
   }
 }
+
 if (!function_exists('pick')) {
   function pick(array $arr, array $keys, $fallback=null){
     foreach ($keys as $k) if (isset($arr[$k]) && $arr[$k] !== '') return $arr[$k];
@@ -102,18 +101,14 @@ foreach ($items as $it){
   <title>Müşterilerim</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .card-shadow { box-shadow: 0 4px 6px -1px rgba(0,0,0,.08), 0 2px 4px -1px rgba(0,0,0,.04); }
-    .customer-card { transition: transform .2s ease, box-shadow .2s ease; }
-    .customer-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -2px rgba(0,0,0,.05); }
-    .search-input:focus { box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
-    .status-active { background:#dcfce7; color:#166534; }
-    .status-inactive { background:#fee2e2; color:#991b1b; }
-    .status-pending { background:#fef3c7; color:#92400e; }
+    .card-shadow { box-shadow:0 4px 6px -1px rgba(0,0,0,.08), 0 2px 4px -1px rgba(0,0,0,.04); }
+    .customer-card { transition:transform .2s ease, box-shadow .2s ease; }
+    .customer-card:hover { transform:translateY(-2px); box-shadow:0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -2px rgba(0,0,0,.05); }
+    .search-input:focus { box-shadow:0 0 0 3px rgba(59,130,246,.12); }
   </style>
 </head>
 
 <body class="bg-transparent">
-  <!-- Tek beyaz kart (navbar yok!) -->
   <section class="max-w-7xl mx-auto my-6 rounded-2xl bg-white ring-1 ring-gray-100 card-shadow overflow-hidden">
     <div class="p-4 sm:p-6 lg:p-8">
       <div class="mb-6">
@@ -160,17 +155,46 @@ foreach ($items as $it){
 
   function initializePage(){ renderCustomers(); updateCustomerCount(); postHeight(); }
   function getInitials(name){ return String(name||'').trim().split(/\s+/).map(w=>w[0]||'').join('').toUpperCase().slice(0,2) || '--'; }
-  function getStatusClass(s){ s=(s||'').toLowerCase(); if(s==='active') return 'status-active'; if(s==='inactive'||s==='passive') return 'status-inactive'; return 'status-pending'; }
-  function getStatusText(s){ s=(s||'').toLowerCase(); if(s==='active') return 'Aktif'; if(s==='inactive'||s==='passive') return 'Pasif'; if(s==='pending') return 'Beklemede'; return 'Bilinmiyor'; }
-  function formatDate(iso){ if(!iso) return '-'; const d=new Date(iso); return isNaN(d)?'-':d.toLocaleDateString('tr-TR',{year:'numeric',month:'short',day:'numeric'}); }
+
+  // Durum rozetinde kullanılacak utility sınıfları
+  function statusPillClass(s){
+    s = (s || '').toLowerCase();
+    if (s === 'active') {
+      return 'inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200';
+    }
+    if (s === 'inactive' || s === 'passive') {
+      return 'inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200';
+    }
+    // pending / diğerleri
+    return 'inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200';
+  }
+
+  function getStatusText(s){
+    s=(s||'').toLowerCase();
+    if(s==='active') return 'Aktif';
+    if(s==='inactive'||s==='passive') return 'Pasif';
+    if(s==='pending') return 'Beklemede';
+    return 'Bilinmiyor';
+  }
+
+  function formatDate(iso){
+    if(!iso) return '-';
+    const d=new Date(iso);
+    return isNaN(d)?'-':d.toLocaleDateString('tr-TR',{year:'numeric',month:'short',day:'numeric'});
+  }
 
   function renderCustomers(){
     const grid = document.getElementById('customerGrid');
     const empty = document.getElementById('emptyState');
+
     if (!filteredCustomers.length){
-      grid.innerHTML = ''; empty.classList.remove('hidden'); postHeight(); return;
+      grid.innerHTML = '';
+      empty.classList.remove('hidden');
+      postHeight();
+      return;
     }
     empty.classList.add('hidden');
+
     grid.innerHTML = filteredCustomers.map(c=>`
       <div class="customer-card bg-white rounded-lg ring-1 ring-gray-100 card-shadow p-6" data-id="${c.id}">
         <div class="flex items-start justify-between mb-4">
@@ -183,18 +207,41 @@ foreach ($items as $it){
               <p class="text-sm text-gray-600">${c.company||'—'}</p>
             </div>
           </div>
-          <span class="px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(c.status)}">${getStatusText(c.status)}</span>
+          <span class="${statusPillClass(c.status)}">${getStatusText(c.status)}</span>
         </div>
+
         <div class="space-y-2 mb-4">
-          <div class="text-sm text-gray-600">${c.email||'—'}</div>
-          <div class="text-sm text-gray-600">${c.phone||'—'}</div>
-          <div class="text-sm text-gray-600">${c.city||'—'}</div>
+          <div class="flex items-center text-sm text-gray-600">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/>
+            </svg>
+            ${c.email||'—'}
+          </div>
+          <div class="flex items-center text-sm text-gray-600">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+            </svg>
+            ${c.phone||'—'}
+          </div>
+          <div class="flex items-center text-sm text-gray-600">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            ${c.city||'—'}
+          </div>
         </div>
+
         <div class="flex items-center justify-between pt-4 border-t border-gray-100">
           <span class="text-xs text-gray-500">Katılım: ${formatDate(c.joinDate)}</span>
           <button onclick="viewCustomer('${c.id}')" class="text-blue-600 hover:text-blue-700 text-sm font-medium">Detaylar →</button>
         </div>
       </div>`).join('');
+
     postHeight();
   }
 

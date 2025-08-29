@@ -1,6 +1,22 @@
 RewriteEngine On
 RewriteBase /is-ortaklar-paneli/bayi/
 
+# A) /bayi veya /bayi/ isteği -> /bayi/dashboard (önce gelmeli)
+RewriteRule ^bayi/?$ bayi/dashboard [R=302,L]
+
+# B) index.php ve ?page=... gibi URL'leri kanonikleştir
+#   /bayi/index.php?page=teklifler  -> /bayi/teklifler
+RewriteCond %{THE_REQUEST} \s/+is-ortaklar-paneli/bayi/index\.php\?page=([^&\s]+) [NC]
+RewriteRule ^bayi/index\.php$ bayi/%1? [R=301,L]
+
+#   /bayi/index.php -> /bayi/dashboard
+RewriteCond %{THE_REQUEST} \s/+is-ortaklar-paneli/bayi/index\.php[?\s] [NC]
+RewriteRule ^bayi/index\.php$ bayi/dashboard [R=301,L]
+
+# C) Pretty URL'leri index router'a gönder
+#    /bayi/teklifler -> /bayi/index.php?page=teklifler
+RewriteRule ^bayi/([^/]+)/?$ bayi/index.php?page=$1 [QSA,L]
+
 # Dosya veya dizin varsa olduğu gibi ver
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d

@@ -6,6 +6,12 @@ session_start();
 if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'bayi') {
   header('Location: /is-ortaklar-paneli/login.php'); exit;
 }
+
+if (!isset($_GET['page']) && basename($_SERVER['SCRIPT_NAME']) === 'index.php') {
+  header('Location: /is-ortaklar-paneli/bayi/dashboard', true, 301);
+  exit;
+}
+
 require_once __DIR__ . '/../config/config.php';
 
 $userName = $_SESSION['user']['name'] ?? '';

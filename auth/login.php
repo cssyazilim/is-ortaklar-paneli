@@ -19,7 +19,7 @@ if (!function_exists('asset_url'))  { function asset_url(string $p){ return rtri
 /* ---------- Güvenli redirect ---------- */
 function safe_redirect(string $url,int $code=302):void{
   if(!headers_sent()){
-    header('Location: '.$url,true,$code);
+   header('Location: /is-ortaklar-paneli/bayi/dashboard', true, 302);
     session_write_close(); exit;
   }
   echo '<script>location.href='.json_encode($url).';</script>';
