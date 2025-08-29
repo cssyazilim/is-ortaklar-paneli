@@ -49,12 +49,6 @@ if (session_status() === PHP_SESSION_NONE) session_start();
         <h1 class="text-xl font-semibold text-gray-900">Bayi Paneli</h1>
       </div>
       <div class="flex items-center space-x-4">
-        <button class="text-gray-500 hover:text-gray-700 transition-colors">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-        </button>
         <button onclick="logout()" class="text-gray-500 hover:text-gray-700 transition-colors">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
@@ -71,7 +65,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
     <ol class="flex items-center space-x-4">
       <li>
         <div>
-          <a href="/is-ortaklar-paneli/bayi/bayi.php" class="text-gray-400 hover:text-gray-500 transition-colors">
+          <a href="/is-ortaklar-paneli/bayi/index.php" class="text-gray-400 hover:text-gray-500 transition-colors">
             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
             </svg>
@@ -108,8 +102,8 @@ if (session_status() === PHP_SESSION_NONE) session_start();
   </div>
 
   <!-- Grid -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 items-start">
-    <div id="company-card" class="bg-white rounded-2xl card-shadow p-6 info-card">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 items-stretch">
+   <div id="company-card" class="bg-white rounded-2xl card-shadow p-6 info-card flex flex-col h-full">
       <div class="flex items-center justify-between mb-6">
         <h2 class="text-xl font-bold text-gray-900 flex items-center">
           <svg class="w-6 h-6 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -127,7 +121,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
       <div id="company-content" class="space-y-4"></div>
     </div>
 
-    <div id="contact-card" class="bg-white rounded-2xl card-shadow p-6 info-card">
+    <div id="contact-card" class="bg-white rounded-2xl card-shadow p-6 info-card flex flex-col h-full">
       <div class="flex items-center justify-between mb-6">
         <h2 class="text-xl font-bold text-gray-900 flex items-center">
           <svg class="w-6 h-6 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

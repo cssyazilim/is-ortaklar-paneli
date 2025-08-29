@@ -124,7 +124,7 @@ function save_tokens_and_user(array $resp,array $who):void{
 }
 
 /* ---------- Panel yönlendirme ---------- */
-function redirect_bayi(){ safe_redirect(url('bayi/bayi.php')); }
+function redirect_bayi(){ safe_redirect(url('bayi/index.php')); }
 
 /* ---------- Zaten login ise /me ile sadece BAYİ'ye gönder ---------- */
 if (!empty($_SESSION['accessToken'])) {

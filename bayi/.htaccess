@@ -1,0 +1,16 @@
+RewriteEngine On
+RewriteBase /is-ortaklar-paneli/bayi/
+
+# Dosya veya dizin varsa olduğu gibi ver
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Boş path -> index.php
+RewriteRule ^$ index.php [L,QSA]
+
+# /bayi/<slug> -> index.php?page=<slug>
+RewriteRule ^([A-Za-z0-9_-]+)/?$ index.php?page=$1 [L,QSA]
+
+# profile.php dosyasını varsayılan index yap
+DirectoryIndex profile.php

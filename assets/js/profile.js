@@ -180,7 +180,7 @@ function renderCompanyContent(){
   const c = document.getElementById('company-content');
   if (!c) return;
 
-  const lt = profileData.legal_type || 'Sirket';   // 'Sirket' | 'Sahis'
+  const lt = (profileData.legal_type || 'Sirket').trim();
   const isSahis = (lt === 'Sahis');
   const LEGAL_TR = { Sirket: 'Şirket', Sahis: 'Şahıs' };
 
@@ -252,7 +252,7 @@ function renderCompanyContent(){
     </div>
 
     ${isSahis ? `
-      <!-- T.C. Kimlik No -->
+      <!-- T.C. Kimlik No (yalnız Şahıs) -->
       <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
         <div class="flex items-center">
           <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-4">
@@ -267,31 +267,36 @@ function renderCompanyContent(){
         </div>
         <span class="status-chip inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">—</span>
       </div>
-    ` : ''}
 
-    <!-- İletişim Kişisi (BURAYA TAŞINDI) -->
-    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-      <div class="flex items-center">
-        <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-4">
-          <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-          </svg>
+      <!-- İletişim Kişisi (Şahıs'ta solda) -->
+      <div data-row="contact-person" class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+        <div class="flex items-center">
+          <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-4">
+            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+          </svg></div>
+          <div>
+            <p class="text-sm font-medium text-gray-900">İletişim Kişisi</p>
+            <p class="text-gray-600" id="contact-name">${safe(profileData.contact_name)}</p>
+          </div>
         </div>
-        <div>
-          <p class="text-sm font-medium text-gray-900">İletişim Kişisi</p>
-          <p class="text-gray-600" id="contact-name">${safe(profileData.contact_name)}</p>
-        </div>
+        <span class="status-chip inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">—</span>
       </div>
-      <span class="status-chip inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">—</span>
-    </div>
+    ` : '' }
   `;
+
+  // Emniyet kemeri: Şirket ise, solda “İletişim Kişisi” kalmışsa kaldır.
+  if (!isSahis) {
+    c.querySelector('[data-row="contact-person"]')?.remove();
+  }
 
   applyGlobalFieldChips(profileData.status);
 }
 
 
 
-  function renderContactContent(){
+
+function renderContactContent(){
   const c = document.getElementById('contact-content');
   if (!c) return;
 
@@ -329,38 +334,54 @@ function renderCompanyContent(){
       </div>
 
       ${isSahis ? `
-      <!-- Ad (BURAYA TAŞINDI) -->
-      <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-        <div class="flex items-center">
-          <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-4">
-            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-            </svg>
+        <!-- Ad -->
+        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div class="flex items-center">
+            <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-4">
+              <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+              </svg>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-900">Ad</p>
+              <p id="first_name" class="text-gray-600">${safe(profileData.first_name)}</p>
+            </div>
           </div>
-          <div>
-            <p class="text-sm font-medium text-gray-900">Ad</p>
-            <p id="first_name" class="text-gray-600">${safe(profileData.first_name)}</p>
-          </div>
+          <span class="status-chip inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">—</span>
         </div>
-        <span class="status-chip inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">—</span>
-      </div>
 
-      <!-- Soyad (BURAYA TAŞINDI) -->
-      <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-        <div class="flex items-center">
-          <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-4">
-            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-            </svg>
+        <!-- Soyad -->
+        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div class="flex items-center">
+            <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-4">
+              <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+              </svg>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-900">Soyad</p>
+              <p id="last_name" class="text-gray-600">${safe(profileData.last_name)}</p>
+            </div>
           </div>
-          <div>
-            <p class="text-sm font-medium text-gray-900">Soyad</p>
-            <p id="last_name" class="text-gray-600">${safe(profileData.last_name)}</p>
-          </div>
+          <span class="status-chip inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">—</span>
         </div>
-        <span class="status-chip inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">—</span>
-      </div>
-      ` : ''}
+      ` : `
+        <!-- İletişim Kişisi (Şirket'te sağda) -->
+        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div class="flex items-center">
+            <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-4">
+              <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+              </svg>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-900">İletişim Kişisi</p>
+              <p class="text-gray-600" id="contact-name">${safe(profileData.contact_name)}</p>
+            </div>
+          </div>
+          <span class="status-chip inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">—</span>
+        </div>
+      `}
 
       <!-- Address -->
       <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
@@ -382,11 +403,12 @@ function renderCompanyContent(){
 }
 
 
+
   /* ========= edit mode ========= */
   window.editCompany = function(){ editProfile(); }
   window.editContact = function(){ editProfile(); }
 
-  function editProfile(){
+function editProfile(){
   if (editModes.profile) return;
   editModes.profile = true;
 
@@ -405,7 +427,7 @@ function renderCompanyContent(){
   const lt = profileData.legal_type || 'Sirket';
   const isSahis = (lt === 'Sahis');
 
-  // === Şirket formu ===
+  // === Şirket/Şahıs formu (SOL) ===
   companyContent.innerHTML = `
     <div class="space-y-4">
       <div class="p-4 bg-white rounded-lg border-2 border-blue-200">
@@ -420,7 +442,6 @@ function renderCompanyContent(){
       </div>
       ` : ''}
 
-      <!-- Hukuki Yapı (salt-okunur rozet) -->
       <div class="p-4 bg-white rounded-lg border-2 border-blue-200">
         <label class="block text-sm font-medium text-gray-900 mb-2">Hukuki Yapı</label>
         <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
@@ -434,24 +455,24 @@ function renderCompanyContent(){
       </div>
 
       ${isSahis ? `
-      <div id="sahis-wrapper" class="space-y-4">
-        <div class="p-4 bg-white rounded-lg border-2 border-blue-200">
-          <label class="block text-sm font-medium text-gray-900 mb-2">T.C. Kimlik No</label>
-          <input type="text" id="edit-tckn" value="${safe(profileData.tckn)}" class="edit-input" maxlength="11" inputmode="numeric" placeholder="11 haneli TCKN">
-          <p class="text-xs text-gray-500 mt-1">Şahıs hesabı için zorunludur.</p>
-        </div>
-      </div>
-      ` : ``}
+        <div id="sahis-wrapper" class="space-y-4">
+          <div class="p-4 bg-white rounded-lg border-2 border-blue-200">
+            <label class="block text-sm font-medium text-gray-900 mb-2">T.C. Kimlik No</label>
+            <input type="text" id="edit-tckn" value="${safe(profileData.tckn)}" class="edit-input" maxlength="11" inputmode="numeric" placeholder="11 haneli TCKN">
+            <p class="text-xs text-gray-500 mt-1">Şahıs hesabı için zorunludur.</p>
+          </div>
 
-      <!-- İletişim Kişisi (BURAYA TAŞINDI) -->
-      <div class="p-4 bg-white rounded-lg border-2 border-blue-200">
-        <label class="block text-sm font-medium text-gray-900 mb-2">İletişim Kişisi</label>
-        <input type="text" id="edit-contact-name" value="${safe(profileData.contact_name)}" class="edit-input" placeholder="İletişim kişisi adı">
-      </div>
+          <!-- İletişim Kişisi (Şahıs'ta solda) -->
+          <div class="p-4 bg-white rounded-lg border-2 border-blue-200">
+            <label class="block text-sm font-medium text-gray-900 mb-2">İletişim Kişisi</label>
+            <input type="text" id="edit-contact-name" value="${safe(profileData.contact_name)}" class="edit-input" placeholder="İletişim kişisi adı">
+          </div>
+        </div>
+      ` : ``}
     </div>
   `;
 
-  // === İletişim formu ===
+  // === İletişim formu (SAĞ) ===
   contactContent.innerHTML = `
     <div class="space-y-4">
       <div class="p-4 bg-white rounded-lg border-2 border-green-200">
@@ -465,26 +486,26 @@ function renderCompanyContent(){
       </div>
 
       ${isSahis ? `
-      <div class="p-4 bg-white rounded-lg border-2 border-green-200">
-        <label class="block text-sm font-medium text-gray-900 mb-2">Ad</label>
-        <input type="text" id="edit-first-name" value="${safe(profileData.first_name)}" class="edit-input" placeholder="Adınız">
-      </div>
-
-      <div class="p-4 bg-white rounded-lg border-2 border-green-200">
-        <label class="block text-sm font-medium text-gray-900 mb-2">Soyad</label>
-        <input type="text" id="edit-last-name" value="${safe(profileData.last_name)}" class="edit-input" placeholder="Soyadınız">
-      </div>
-      ` : ``}
+        <div class="p-4 bg-white rounded-lg border-2 border-green-200">
+          <label class="block text-sm font-medium text-gray-900 mb-2">Ad</label>
+          <input type="text" id="edit-first-name" value="${safe(profileData.first_name)}" class="edit-input" placeholder="Adınız">
+        </div>
+        <div class="p-4 bg-white rounded-lg border-2 border-green-200">
+          <label class="block text-sm font-medium text-gray-900 mb-2">Soyad</label>
+          <input type="text" id="edit-last-name" value="${safe(profileData.last_name)}" class="edit-input" placeholder="Soyadınız">
+        </div>
+      ` : `
+        <!-- İletişim Kişisi (Şirket'te sağda) -->
+        <div class="p-4 bg-white rounded-lg border-2 border-green-200">
+          <label class="block text-sm font-medium text-gray-900 mb-2">İletişim Kişisi</label>
+          <input type="text" id="edit-contact-name" value="${safe(profileData.contact_name)}" class="edit-input" placeholder="İletişim kişisi adı">
+        </div>
+      `}
 
       <div class="p-4 bg-white rounded-lg border-2 border-green-200">
         <label class="block text-sm font-medium text-gray-900 mb-2">Adres </label>
-       <textarea
-        id="edit-address"
-        class="edit-input resize-none overflow-hidden leading-6 min-h-[44px] h-[44px]"
-        rows="1" maxlength="300"
-        placeholder="Detaylı adres bilgisi giriniz"
-        >${safe(profileData.address)}</textarea>
-        <div class="text-xs text-gray-500 mt-1">Maksimum 300 karakter.</div>
+        <textarea id="edit-address" class="edit-input resize-none overflow-hidden leading-6 min-h-[44px] h-[44px]" rows="1" maxlength="300" placeholder="Detaylı adres bilgisi giriniz">${safe(profileData.address)}</textarea>
+        <div class="text-xs text-gray-500 mt-1" id="addressCounter">0/300</div>
       </div>
 
       <div class="edit-buttons">
@@ -502,6 +523,7 @@ function renderCompanyContent(){
 
   bindAddressCounter();
 }
+
 
 
   /* ========= save ========= */

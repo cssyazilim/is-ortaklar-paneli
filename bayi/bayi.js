@@ -1,91 +1,136 @@
-// Mobil menü aç/kapat
-function toggleMobileMenu() {
-  const mobileMenu = document.getElementById('mobile-menu');
-  if (mobileMenu) mobileMenu.classList.toggle('hidden');
+/* =======================
+   Bayi Paneli - temiz JS
+   ======================= */
+(function () {
+  /* -------- Genel kontroller -------- */
+  function toggleMobileMenu(){
+  const el = document.getElementById('mobile-menu');
+  if (el) el.classList.toggle('hidden');
 }
-
-// Kullanıcı menüsü aç/kapat
 function toggleUserMenu() {
-  const userMenu = document.getElementById('user-menu');
-  if (userMenu) userMenu.classList.toggle('hidden');
+  const el = document.getElementById('user-menu');
+  if (el) {
+    el.classList.toggle('hidden');
+  }
 }
 
-// Çıkış yap
-function logout() {
+// Menü dışında bir yere tıklayınca kapanması için:
+document.addEventListener('click', function(e){
+  const menu = document.getElementById('user-menu');
+  const btn  = e.target.closest('button[onclick="toggleUserMenu()"]');
+  if (!menu || btn) return;
+  if (!menu.contains(e.target)) {
+    menu.classList.add('hidden');
+  }
+});
+function logout(){
   window.location.href = '/is-ortaklar-paneli/auth/logout.php';
 }
 
-// Dışarı tıklanınca user menüyü kapat
-document.addEventListener('click', function (event) {
-  const userMenu = document.getElementById('user-menu');
-  const button = event.target.closest('button[onclick="toggleUserMenu()"]');
-  if (!userMenu) return;
-  if (!button && !userMenu.contains(event.target)) {
-    userMenu.classList.add('hidden');
+  /* -------- IFRAME tabanlı gezinme -------- */
+  const BASE = '/is-ortaklar-paneli/bayi/';
+
+  // Tek kaynak: tüm butonlar buradaki anahtarları kullanır
+  const ROUTES = {
+    dashboard:    'dashboard.php',
+    registration: 'musteriKayit.php',
+    customers:    'musterilerim.php',
+    quotes:       'teklifler.php',
+    orders:       'siparislerim.php',
+    billing:      'faturalar.php',
+  };
+
+  const frameWrap    = document.getElementById('frame-wrap');
+  const contentFrame = document.getElementById('content-frame');
+
+  // Aktif sekme görünümü
+  function setActiveNav(key) {
+    // desktop
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.classList.remove('text-indigo-600', 'border-b-2', 'border-indigo-500');
+      btn.classList.add('text-gray-500', 'hover:text-gray-700');
+    });
+    const desk = document.querySelector(`.nav-btn[onclick="showSection('${key}')"]`);
+    if (desk) {
+      desk.classList.remove('text-gray-500', 'hover:text-gray-700');
+      desk.classList.add('text-indigo-600', 'border-b-2', 'border-indigo-500');
+    }
+    // mobile
+    document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+      btn.classList.remove('text-indigo-600', 'bg-indigo-50');
+      btn.classList.add('text-gray-700', 'hover:text-gray-900', 'hover:bg-gray-100');
+    });
+    const mob = document.querySelector(`.mobile-nav-btn[onclick*="showSection('${key}')"]`);
+    if (mob) {
+      mob.classList.remove('text-gray-700', 'hover:text-gray-900', 'hover:bg-gray-100');
+      mob.classList.add('text-indigo-600', 'bg-indigo-50');
+    }
   }
-});
 
-// Sayfa sekmeleri arasında geçiş
-function showSection(sectionName) {
-  // tüm section’ları gizle
-  document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+  // Navbar’dan çağrılacak tek fonksiyon
+  function showSection(key) {
+    const file = ROUTES[key] || ROUTES.dashboard;
 
-  // seçilen section’ı göster
-  const target = document.getElementById(sectionName);
-  if (target) target.classList.remove('hidden');
+    // iframe alanını görünür yap
+    if (frameWrap) frameWrap.classList.remove('hidden');
+    if (!contentFrame) return;
 
-  // Desktop nav güncelle
-  document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.classList.remove('text-indigo-600', 'border-b-2', 'border-indigo-500');
-    btn.classList.add('text-gray-500', 'hover:text-gray-700');
+    // embed=1 ile yalın içerik
+    const url = BASE + file + (file.includes('?') ? '&' : '?') + 'embed=1';
+    if (contentFrame.getAttribute('src') !== url) {
+      contentFrame.src = url;
+    }
+
+    setActiveNav(key);
+    history.pushState({ key }, '', '#' + key);
+  }
+
+  // Geri/ileri
+  window.addEventListener('popstate', (e) => {
+    const key = (e.state && e.state.key) || 'dashboard';
+    showSection(key);
   });
-  const activeDesktopBtn = document.querySelector(`.nav-btn[onclick="showSection('${sectionName}')"]`);
-  if (activeDesktopBtn) {
-    activeDesktopBtn.classList.remove('text-gray-500', 'hover:text-gray-700');
-    activeDesktopBtn.classList.add('text-indigo-600', 'border-b-2', 'border-indigo-500');
-  }
 
-  // Mobil nav güncelle
-  document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
-    btn.classList.remove('text-indigo-600', 'bg-indigo-50');
-    btn.classList.add('text-gray-700', 'hover:text-gray-900', 'hover:bg-gray-100');
+  // Çocuk sayfa yükseklik mesajı (her iki tip de kabul)
+  window.addEventListener('message', (e) => {
+    if (!contentFrame || e.source !== contentFrame.contentWindow) return;
+    if (!e.data) return;
+    if (e.data.type !== 'resize-iframe' && e.data.type !== 'musterikayit-height') return;
+    const h = Math.max(480, Number(e.data.height || 0));
+    contentFrame.style.height = h + 'px';
   });
-  const activeMobileBtn = document.querySelector(`.mobile-nav-btn[onclick*="showSection('${sectionName}')"]`);
-  if (activeMobileBtn) {
-    activeMobileBtn.classList.remove('text-gray-700', 'hover:text-gray-900', 'hover:bg-gray-100');
-    activeMobileBtn.classList.add('text-indigo-600', 'bg-indigo-50');
+
+  // Fallback: çocuk sayfa postMessage atmazsa yine de yükseklik ayarla
+  if (contentFrame) {
+    contentFrame.addEventListener('load', () => {
+      setTimeout(() => {
+        try {
+          const doc = contentFrame.contentDocument || contentFrame.contentWindow.document;
+          if (!doc) return;
+          const h = Math.max(
+            doc.body.scrollHeight, doc.body.offsetHeight,
+            doc.documentElement.clientHeight, doc.documentElement.scrollHeight, doc.documentElement.offsetHeight
+          );
+          contentFrame.style.height = (h ? Math.max(480, h) : 600) + 'px';
+        } catch (_) { /* cross-origin değilse sorun yok */ }
+      }, 120);
+    });
   }
-}
 
-// Teklif aksiyonları
-function createNewQuote() {
-  alert('Yeni teklif oluşturma sayfasına yönlendiriliyorsunuz...');
-}
-function viewQuote(quoteId) {
-  alert(`${quoteId} numaralı teklif detayları görüntüleniyor...`);
-}
+  // İlk açılış: hash varsa ona, yoksa dashboard
+  document.addEventListener('DOMContentLoaded', () => {
+    const key = (location.hash || '#dashboard').slice(1);
+    showSection(ROUTES[key] ? key : 'dashboard');
+  });
 
-// Sipariş aksiyonları
-function viewOrder(orderId) {
-  alert(`${orderId} numaralı sipariş detayları görüntüleniyor...`);
-}
+  // Global export (onclick’ler için)
+  window.toggleMobileMenu = toggleMobileMenu;
+  window.toggleUserMenu   = toggleUserMenu;
+  window.logout           = logout;
+  window.showSection      = showSection;
 
-// Otomatik faturalandırma simülasyonu
-function simulateAutoBilling() {
-  console.log('Otomatik faturalandırma çalışıyor...');
-}
-
-// Sayfa yüklenince
-document.addEventListener('DOMContentLoaded', function () {
-  setInterval(simulateAutoBilling, 60000);
-  showSection('dashboard'); // açılışta dashboard
-});
-
-// Fonksiyonlar globalde 
-window.toggleMobileMenu = toggleMobileMenu;
-window.toggleUserMenu   = toggleUserMenu;
-window.logout           = logout;
-window.showSection      = showSection;
-window.createNewQuote   = createNewQuote;
-window.viewQuote        = viewQuote;
-window.viewOrder        = viewOrder;
+  // Örnek aksiyonlar
+  window.createNewQuote = () => showSection('quotes');
+  window.viewQuote      = (id) => alert(`Teklif: ${id}`);
+  window.viewOrder      = (id) => alert(`Sipariş: ${id}`);
+})();

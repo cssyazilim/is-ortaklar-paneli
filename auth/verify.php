@@ -109,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // scope/role’a göre yönlendir
         $pref = $_SESSION['mfa']['prefill'] ?? [];
         $redirect = ($pref['scope'] ?? 'partner') === 'partner'
-          ? url('bayi/bayi.php')
+          ? url('bayi/index.php')
           : url('admin/anasayfa.php');
 
         unset($_SESSION['mfa']);
@@ -289,7 +289,7 @@ $sid         = $_SESSION['mfa']['session_id'];
         if (!res.ok || !data?.success) throw new Error(data?.message || `HTTP ${res.status}`);
 
         showSuccess(data.message || 'Doğrulama başarılı.');
-        setTimeout(()=>{ location.href = data.redirect || '<?= e(url("bayi/bayi.php")) ?>'; }, 500);
+        setTimeout(()=>{ location.href = data.redirect || '<?= e(url("bayi/index.php")) ?>'; }, 500);
       } catch (e) {
         showError(e.message || 'Doğrulama başarısız.');
         document.getElementById('otpCode').value = '';
