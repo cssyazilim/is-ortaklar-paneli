@@ -33,6 +33,7 @@ $ROUTES = [
   'musteriKayit'  => __DIR__ . '/musteriKayit.php',
   'musterilerim'  => __DIR__ . '/musterilerim.php',
   'teklifler'     => __DIR__ . '/teklifler.php',
+  'teklif-olustur'  => 'teklif-olustur.php',   // <-- BUNU EKLE
   'siparislerim'  => __DIR__ . '/siparislerim.php',
   'faturalar'     => __DIR__ . '/faturalar.php',
 ];

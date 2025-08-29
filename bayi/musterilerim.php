@@ -61,9 +61,14 @@ if (!function_exists('partner_bearer')) {
 
 if (!function_exists('pick')) {
   function pick(array $arr, array $keys, $fallback=null){
-    foreach ($keys as $k) if (isset($arr[$k]) && $arr[$k] !== '') return $arr[$k];
+    foreach ($keys as $k) if (array_key_exists($k, $arr) && $arr[$k] !== '') return $arr[$k];
     return $fallback;
   }
+}
+
+/* null ise kelime olarak "null" döndür */
+function show_or_null($v){
+  return ($v === null || $v === '') ? 'null' : $v;
 }
 
 /* ========= Data fetch ========= */
@@ -78,18 +83,23 @@ try {
   $apiError = $e->getMessage();
 }
 
+/* ========= Map to UI model ========= */
 $customers = [];
 foreach ($items as $it){
-  $name = pick($it, ['name','title','full_name','company_name'], '—');
+  $display = pick($it, ['title','name','company_name','full_name'], '—');
   $customers[] = [
-    'id'       => (string)($it['id'] ?? ''),
-    'name'     => $name,
-    'company'  => pick($it, ['company','company_name','title'], $name),
-    'email'    => pick($it, ['email','contact_email'], '—'),
-    'phone'    => pick($it, ['phone','gsm','contact_phone'], '—'),
-    'city'     => pick($it, ['city','il','sehir'], '—'),
-    'status'   => strtolower(pick($it, ['status'], 'pending')),
-    'joinDate' => pick($it, ['created_at','createdAt','created'], null),
+    'id'         => (string)($it['id'] ?? ''),
+    'name'       => $display,
+    'company'    => pick($it, ['title','company','company_name'], $display),
+    'email'      => array_key_exists('email',$it)   ? show_or_null($it['email'])   : 'null',
+    'phone'      => array_key_exists('phone',$it)   ? show_or_null($it['phone'])   : 'null',
+    'address'    => array_key_exists('address',$it) ? show_or_null($it['address']) : 'null',
+    'type'       => $it['type'] ?? '—',
+    'program'    => $it['program'] ?? '—',
+    'userCount'  => (int)($it['user_count'] ?? 0),
+    'status'     => strtolower($it['status'] ?? 'pending'),
+    'createdAt'  => $it['created_at'] ?? null,
+    'updatedAt'  => $it['updated_at'] ?? null,
   ];
 }
 ?>
@@ -105,6 +115,17 @@ foreach ($items as $it){
     .customer-card { transition:transform .2s ease, box-shadow .2s ease; }
     .customer-card:hover { transform:translateY(-2px); box-shadow:0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -2px rgba(0,0,0,.05); }
     .search-input:focus { box-shadow:0 0 0 3px rgba(59,130,246,.12); }
+
+    @media print {
+      body * { visibility: hidden !important; }
+      #printArea, #printArea * { visibility: visible !important; }
+      #printArea {
+        position: absolute; inset: 0; display: block !important; background: #fff;
+      }
+      #printTable { width: 100%; border-collapse: collapse; }
+      #printTable th, #printTable td { border: 1px solid #ddd; padding: 8px; font-size: 12px; }
+      #printTable th { background: #f3f4f6; text-align: left; }
+    }
   </style>
 </head>
 
@@ -121,7 +142,7 @@ foreach ($items as $it){
                      onkeyup="searchCustomers()">
             </div>
           </div>
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3 flex-wrap">
             <select id="statusFilter" onchange="filterByStatus()"
                     class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
               <option value="">Tüm Durumlar</option>
@@ -149,6 +170,9 @@ foreach ($items as $it){
     </div>
   </section>
 
+  <!-- Yazdırma alanı -->
+  <div id="printArea" class="hidden p-8"></div>
+
   <script>
   const customers = <?php echo json_encode($customers, JSON_UNESCAPED_UNICODE); ?>;
   let filteredCustomers = [...customers];
@@ -156,19 +180,12 @@ foreach ($items as $it){
   function initializePage(){ renderCustomers(); updateCustomerCount(); postHeight(); }
   function getInitials(name){ return String(name||'').trim().split(/\s+/).map(w=>w[0]||'').join('').toUpperCase().slice(0,2) || '--'; }
 
-  // Durum rozetinde kullanılacak utility sınıfları
   function statusPillClass(s){
     s = (s || '').toLowerCase();
-    if (s === 'active') {
-      return 'inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200';
-    }
-    if (s === 'inactive' || s === 'passive') {
-      return 'inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200';
-    }
-    // pending / diğerleri
+    if (s === 'active')  return 'inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200';
+    if (s === 'inactive' || s === 'passive') return 'inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200';
     return 'inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200';
   }
-
   function getStatusText(s){
     s=(s||'').toLowerCase();
     if(s==='active') return 'Aktif';
@@ -176,7 +193,6 @@ foreach ($items as $it){
     if(s==='pending') return 'Beklemede';
     return 'Bilinmiyor';
   }
-
   function formatDate(iso){
     if(!iso) return '-';
     const d=new Date(iso);
@@ -216,14 +232,14 @@ foreach ($items as $it){
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/>
             </svg>
-            ${c.email||'—'}
+            ${c.email}
           </div>
           <div class="flex items-center text-sm text-gray-600">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
             </svg>
-            ${c.phone||'—'}
+            ${c.phone}
           </div>
           <div class="flex items-center text-sm text-gray-600">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -232,12 +248,17 @@ foreach ($items as $it){
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
             </svg>
-            ${c.city||'—'}
+            ${c.address}
+          </div>
+
+          <div class="text-xs text-gray-500">
+            <span class="mr-3"><strong>Program:</strong> ${c.program}</span>
+            <span class="mr-3"><strong>Kullanıcı:</strong> ${c.userCount}</span>
           </div>
         </div>
 
         <div class="flex items-center justify-between pt-4 border-t border-gray-100">
-          <span class="text-xs text-gray-500">Katılım: ${formatDate(c.joinDate)}</span>
+          <span class="text-xs text-gray-500">Oluşturma: ${formatDate(c.createdAt)}</span>
           <button onclick="viewCustomer('${c.id}')" class="text-blue-600 hover:text-blue-700 text-sm font-medium">Detaylar →</button>
         </div>
       </div>`).join('');
@@ -249,7 +270,8 @@ foreach ($items as $it){
     const q  = (document.getElementById('searchInput').value||'').toLowerCase();
     const st = document.getElementById('statusFilter').value;
     filteredCustomers = customers.filter(c=>{
-      const hay = [c.name,c.company,c.email,c.city].map(x=>String(x||'').toLowerCase()).join(' ');
+      const hay = [c.name,c.company,c.email,c.phone,c.address,c.program,c.type]
+                    .map(x=>String(x||'').toLowerCase()).join(' ');
       const okQ = hay.includes(q);
       const okS = !st || (String(c.status||'').toLowerCase()===st);
       return okQ && okS;
@@ -260,7 +282,7 @@ foreach ($items as $it){
   function updateCustomerCount(){ document.getElementById('customerCount').textContent = `${filteredCustomers.length} müşteri`; }
   function viewCustomer(id){ alert(`Müşteri detayı açılacak (id: ${id||'-'})`); }
 
-  // Parent yüksekliği (index.php içindeki içerik alanını doğru uzatmak için)
+  // Parent yüksekliği
   function postHeight(){
     try {
       const h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
@@ -270,10 +292,83 @@ foreach ($items as $it){
   new ResizeObserver(postHeight).observe(document.body);
   window.addEventListener('load', initializePage);
 
-  // Parent'tan yeniden yükleme isteği (opsiyonel)
+  // Parent'tan reload isteği
   window.addEventListener('message', (e)=>{
     if (e?.data?.type === 'customers-reload') location.reload();
   });
+
+  /* ========= Toplu e-posta/telefon: kopyala + yazdır ========= */
+  function _uniqueNonEmpty(arr) {
+    return [...new Set(arr.map(x => String(x || '').trim()).filter(x => x && x !== 'null'))];
+  }
+  function _normalizePhone(p) { return String(p || '').replace(/[^\d+]/g, ''); }
+  async function _copyToClipboard(text) {
+    try { await navigator.clipboard.writeText(text); alert('Panoya kopyalandı.'); }
+    catch {
+      const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy'); document.body.removeChild(ta); alert('Panoya kopyalandı.');
+    }
+  }
+  function copyEmails() {
+    const emails = _uniqueNonEmpty(filteredCustomers.map(c => c.email));
+    if (!emails.length) { alert('E-posta bulunamadı.'); return; }
+    _copyToClipboard(emails.join(', '));
+  }
+  function copyPhones() {
+    const phones = _uniqueNonEmpty(filteredCustomers.map(c => _normalizePhone(c.phone)));
+    if (!phones.length) { alert('Telefon bulunamadı.'); return; }
+    _copyToClipboard(phones.join(', '));
+  }
+  function _buildPrintArea() {
+    const el = document.getElementById('printArea');
+    const now = new Date().toLocaleString('tr-TR');
+    const rows = filteredCustomers.map(c => `
+      <tr>
+        <td>${c.name || '—'}</td>
+        <td>${c.company || '—'}</td>
+        <td>${c.email}</td>
+        <td>${c.phone}</td>
+        <td>${c.address}</td>
+        <td>${c.type || '—'}</td>
+        <td>${c.program}</td>
+        <td>${c.userCount}</td>
+        <td>${getStatusText(c.status)}</td>
+        <td>${formatDate(c.createdAt)}</td>
+      </tr>
+    `).join('');
+    el.innerHTML = `
+      <h1 style="font:600 18px system-ui, -apple-system, Segoe UI, Roboto">Müşteri İletişim Listesi</h1>
+      <div style="margin:6px 0 14px;color:#6b7280;font:14px system-ui">Toplam: ${filteredCustomers.length} • Tarih: ${now}</div>
+      <table id="printTable">
+        <thead>
+          <tr>
+            <th>Görünen Ad</th>
+            <th>Firma</th>
+            <th>E-posta</th>
+            <th>Telefon</th>
+            <th>Adres</th>
+            <th>Tip</th>
+            <th>Program</th>
+            <th>Kullanıcı</th>
+            <th>Durum</th>
+            <th>Oluşturma</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+  function printContacts() {
+    if (!filteredCustomers.length) { alert('Yazdırılacak müşteri yok.'); return; }
+    _buildPrintArea();
+    const area = document.getElementById('printArea');
+    area.classList.remove('hidden');
+    postHeight();
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => { area.classList.add('hidden'); postHeight(); }, 300);
+    }, 50);
+  }
   </script>
 </body>
 </html>

@@ -1,10 +1,12 @@
 <?php
 // bayi/teklifler.php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
 if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'bayi') {
   header('Location: /is-ortaklar-paneli/login.php'); exit;
 }
-/* en üstte */
+
 $EMBED = isset($_GET['embed']) && $_GET['embed'] == '1';
 
 require_once __DIR__ . '/../config/config.php';
@@ -13,7 +15,7 @@ require_once __DIR__ . '/../config/config.php';
 if (!defined('API_BASE')) define('API_BASE', 'http://34.44.194.247:3001/api/auth');
 if (!defined('API_ROOT')) define('API_ROOT', preg_replace('~/auth/?$~i','', rtrim(API_BASE,'/')));
 
-/* ===== Basit GET ===== */
+/* ===== Helpers ===== */
 function http_get_json(string $base, string $path, array $headers=[]): array {
   $url = rtrim($base,'/').'/'.ltrim($path,'/');
   $ch = curl_init($url);
@@ -36,7 +38,6 @@ function http_get_json(string $base, string $path, array $headers=[]): array {
   return $json;
 }
 
-/* ===== JWT payload (doğrulamasız) ===== */
 function jwt_payload(string $jwt): array {
   $p = explode('.', $jwt);
   if (count($p) < 2) return [];
@@ -45,21 +46,27 @@ function jwt_payload(string $jwt): array {
   return is_array($json) ? $json : [];
 }
 
-/* ===== Status -> rozet ===== */
 function status_meta(string $s): array {
   $s = strtolower($s);
-  if ($s === 'active')   return ['Müşteri Onayladı', 'status-approved bg-green-100 text-green-700'];
-  if ($s === 'pending')  return ['İncelemede',        'status-review bg-yellow-100 text-yellow-700'];
-  if ($s === 'draft')    return ['Teklif Hazır',      'status-ready bg-emerald-100 text-emerald-700'];
-  if ($s === 'rejected' || $s === 'passive') return ['Reddedildi','bg-red-100 text-red-700'];
-  return ['İncelemede', 'status-review bg-yellow-100 text-yellow-700'];
+  return match($s) {
+    'accepted' => ['Müşteri Onayladı',      'bg-green-100 text-green-700'],
+    'sent'     => ['Müşteriye Gönderildi',  'bg-indigo-100 text-indigo-700'],
+    'draft'    => ['Taslak',                'bg-gray-100 text-gray-700'],
+    'rejected' => ['Reddedildi',            'bg-red-100 text-red-700'],
+    'expired'  => ['Süresi Doldu',          'bg-orange-100 text-orange-700'],
+    default    => ['İncelemede',            'bg-yellow-100 text-yellow-700'],
+  };
 }
 
-/* ===== TR tarih helper ===== */
 function tr_date(?string $iso): string {
   if (!$iso) return '-';
   $t = strtotime($iso); if (!$t) return '-';
   return date('d.m.Y', $t);
+}
+
+// "Bearer " ön eki yoksa ekle
+function bearer(string $token): string {
+  return preg_match('/^Bearer\s+/i', $token) ? $token : ('Bearer '.$token);
 }
 
 /* ===== Partner scope’lu token seç ===== */
@@ -83,31 +90,57 @@ if (!$token) {
   $apiError = 'Bu liste için partner (bayi) scope gereklidir. Bayi hesabıyla giriş yapın.';
 } else {
   try {
-    $headers = ['Authorization: Bearer '.$token];
+    $headers = ['Authorization: '.bearer($token)];
     if (!empty($_SESSION['user']['partner_id'])) {
       $headers[] = 'X-Partner-Id: '.$_SESSION['user']['partner_id'];
     }
-    // Not: Şu an customers'dan besleniyor. İleride /quotes endpoint'iniz olursa burayı değiştirin.
-    $resp  = http_get_json(API_ROOT, 'customers', $headers);
-    $items = $resp['items'] ?? [];
 
-    foreach ($items as $it) {
-      $id     = (string)($it['id'] ?? '');
-      $short  = strtoupper(substr(str_replace('-','',$id), 0, 8));
-      $no     = $short ? ('CUS-'.$short) : 'CUS-XXXXXX';
-      $title  = $it['title'] ?? ($it['name'] ?? '-');
-      $tarih  = $it['created_at'] ?? $it['updated_at'] ?? null;
-      $status = $it['status'] ?? 'pending';
+    // Filtre/paginasyon
+    $qs = [];
+    if (isset($_GET['status']) && $_GET['status'] !== '') $qs[] = 'status='.rawurlencode($_GET['status']);
+    $limit  = isset($_GET['limit'])  ? max(1, min(200, (int)$_GET['limit']))  : 50;
+    $offset = isset($_GET['offset']) ? max(0, (int)$_GET['offset']) : 0;
+    $qs[] = "limit={$limit}";
+    $qs[] = "offset={$offset}";
+    $path = 'quotes'.(count($qs) ? ('?'.implode('&', $qs)) : '');
+
+    // GET /api/quotes -> dizi döner
+    $quotes = http_get_json(API_ROOT, $path, $headers);
+
+    foreach ($quotes as $q) {
+      $id       = (string)($q['id'] ?? '');
+      $short    = strtoupper(substr(str_replace('-','',$id), 0, 8));
+      $no       = $short ? ('QUO-'.$short) : 'QUO-XXXXXX';
+      $title    = $q['title'] ?? $q['name'] ?? '-';
+      $amount   = $q['total_amount'] ?? null;
+      $currency = $q['currency'] ?? 'TRY';
+      $status   = $q['status'] ?? 'pending';
+      $tarih    = $q['created_at'] ?? $q['validity_date'] ?? null;
       [$label,$cls] = status_meta($status);
 
+      // Tutarı GÖRÜNTÜLEME İÇİN formatla (string)
+      $tutarStr = null;
+      if (is_numeric($amount)) {
+        $num = (float)$amount;
+        if ($currency === 'TRY') {
+          $tutarStr = '₺'.number_format($num, 0, ',', '.');
+        } elseif ($currency === 'USD') {
+          $tutarStr = '$'.number_format($num, 0, ',', '.');
+        } elseif ($currency === 'EUR') {
+          $tutarStr = '€'.number_format($num, 0, ',', '.');
+        } else {
+          $tutarStr = number_format($num, 0, ',', '.').' '.$currency;
+        }
+      }
+
       $rows[] = [
-        'no'     => $no,
-        'musteri'=> $title,
-        'tutar'  => null, // customers API tutar vermiyor
-        'tarih'  => $tarih,
-        'label'  => $label,
-        'cls'    => $cls,
-        'id'     => $id,
+        'no'      => $no,
+        'musteri' => $title,
+        'tutar'   => $tutarStr,   // tabloya string olarak basacağız
+        'tarih'   => $tarih,
+        'label'   => $label,
+        'cls'     => $cls,
+        'id'      => $id,
       ];
     }
   } catch (Throwable $e) {
@@ -136,7 +169,7 @@ if (!$token) {
     <div class="bg-white rounded-xl shadow-md p-6 border border-gray-100 mb-6">
       <div class="flex justify-between items-center">
         <h3 class="text-lg font-semibold text-gray-900">Teklif İşlemleri</h3>
-        <button onclick="createNewQuote()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+        <button type="button" onclick="createNewQuote()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg">
           Yeni Teklif Oluştur
         </button>
       </div>
@@ -173,7 +206,7 @@ if (!$token) {
                     <?= htmlspecialchars($r['musteri'], ENT_QUOTES, 'UTF-8') ?>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <?= $r['tutar'] !== null ? '₺'.number_format($r['tutar'],0,',','.') : '-' ?>
+                    <?= $r['tutar'] !== null ? htmlspecialchars($r['tutar'], ENT_QUOTES, 'UTF-8') : '-' ?>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
                     <span class="px-2 py-1 text-xs font-semibold rounded-full <?= htmlspecialchars($r['cls'], ENT_QUOTES, 'UTF-8') ?>">

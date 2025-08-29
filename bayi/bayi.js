@@ -14,6 +14,11 @@ function toggleUserMenu() {
   }
 }
 
+
+function createNewQuote() {
+  window.location.href = '/is-ortaklar-paneli/bayi/teklif-olustur';
+}
+
 // Menü dışında bir yere tıklayınca kapanması için:
 document.addEventListener('click', function(e){
   const menu = document.getElementById('user-menu');
@@ -133,4 +138,10 @@ function logout(){
   window.createNewQuote = () => showSection('quotes');
   window.viewQuote      = (id) => alert(`Teklif: ${id}`);
   window.viewOrder      = (id) => alert(`Sipariş: ${id}`);
+
+  window.createNewQuote = function () {
+  window.location.href = '/is-ortaklar-paneli/bayi/teklif-olustur';
+};
+
+
 })();

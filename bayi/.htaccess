@@ -30,3 +30,7 @@ RewriteRule ^([A-Za-z0-9_-]+)/?$ index.php?page=$1 [L,QSA]
 
 # profile.php dosyasını varsayılan index yap
 DirectoryIndex profile.php
+
+
+# /is-ortaklar-paneli/bayi/teklif-olustur --> bayi/teklif-olustur.php
+RewriteRule ^bayi/teklif-olustur/?$ bayi/teklif-olustur.php [L,QSA]
