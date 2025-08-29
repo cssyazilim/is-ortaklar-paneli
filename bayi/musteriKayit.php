@@ -4,7 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 if (!isset($_SESSION['user']['role']) || $_SESSION['user']['role'] !== 'bayi') {
-  header('Location: /is-ortaklar-paneli/login.php'); 
+  header('Location: /is-ortaklar-paneli/login.php');
   exit;
 }
 
@@ -14,9 +14,7 @@ $EMBED = (
   isset($_SERVER['HTTP_X_EMBED']) ||
   (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH'])==='xmlhttprequest')
 );
-
 ?>
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -24,6 +22,12 @@ $EMBED = (
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Müşteri Kayıt</title>
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Backend için meta (token/endpoint) -->
+<meta name="partner-token" content="<?= htmlspecialchars($_SESSION['partnerAccessToken'] ?? $_SESSION['bayiAccessToken'] ?? $_SESSION['accessToken'] ?? '', ENT_QUOTES) ?>">
+
+  <meta name="partners-me-url" content="/is-ortaklar-paneli/api/partners_me.php">
+
   <?php if(!$EMBED): ?>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/bayi.css">
@@ -39,39 +43,14 @@ $EMBED = (
     <section class="rounded-2xl bg-white ring-1 ring-gray-100 card-shadow overflow-hidden">
       <div class="p-4 sm:p-6 lg:p-8">
         <div class="mb-4 sm:mb-8">
-          <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Müşteri Kayıt Süreci</h2>
-          <p class="text-sm sm:text-base text-gray-600">Yeni müşteri kayıt işlemleri ve onay durumu</p>
+          <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Müşteri Kayıt ve Onay Sürecim</h2>
+          <p class="text-sm sm:text-base text-gray-600">Yeni müşteri kayıt işlemleri ve onay durumum</p>
         </div>
 
-        <!-- Süreç adımları -->
+        <!-- Süreç adımları (dinamik) -->
         <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6">
-          <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Kayıt Süreci Adımları</h3>
-          <div class="flex items-center justify-between overflow-x-auto pb-2">
-            <div class="flex flex-col items-center flex-shrink-0">
-              <div class="w-8 h-8 sm:w-10 sm:h-10 bg-green-500 rounded-full flex items-center justify-center text-white font-semibold text-sm sm:text-base">1</div>
-              <p class="text-xs sm:text-sm mt-2 text-center whitespace-nowrap">Form<br class="hidden sm:block">Doldurma</p>
-            </div>
-            <div class="flex-1 h-1 bg-green-500 mx-1 sm:mx-2 min-w-[20px]"></div>
-            <div class="flex flex-col items-center flex-shrink-0">
-              <div class="w-8 h-8 sm:w-10 sm:h-10 bg-green-500 rounded-full flex items-center justify-center text-white font-semibold text-sm sm:text-base">2</div>
-              <p class="text-xs sm:text-sm mt-2 text-center whitespace-nowrap">Operasyon<br class="hidden sm:block">İnceleme</p>
-            </div>
-            <div class="flex-1 h-1 bg-yellow-400 mx-1 sm:mx-2 min-w-[20px]"></div>
-            <div class="flex flex-col items-center flex-shrink-0">
-              <div class="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-400 rounded-full flex items-center justify-center text-white font-semibold text-sm sm:text-base">3</div>
-              <p class="text-xs sm:text-sm mt-2 text-center whitespace-nowrap">Ek Evrak<br class="hidden sm:block">Bekleniyor</p>
-            </div>
-            <div class="flex-1 h-1 bg-gray-300 mx-1 sm:mx-2 min-w-[20px]"></div>
-            <div class="flex flex-col items-center flex-shrink-0">
-              <div class="w-8 h-8 sm:w-10 sm:h-10 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 font-semibold text-sm sm:text-base">4</div>
-              <p class="text-xs sm:text-sm mt-2 text-center whitespace-nowrap">Onay</p>
-            </div>
-            <div class="flex-1 h-1 bg-gray-300 mx-1 sm:mx-2 min-w-[20px]"></div>
-            <div class="flex flex-col items-center flex-shrink-0">
-              <div class="w-8 h-8 sm:w-10 sm:h-10 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 font-semibold text-sm sm:text-base">5</div>
-              <p class="text-xs sm:text-sm mt-2 text-center whitespace-nowrap">Giriş<br class="hidden sm:block">Aktif</p>
-            </div>
-          </div>
+          <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Kayıt Süreci Adımlarım</h3>
+          <div id="workflow-stepper" class="overflow-x-auto pb-2"></div>
         </div>
 
         <!-- Kayıt formu -->
@@ -126,28 +105,96 @@ $EMBED = (
     </section>
   </div>
 
-  <script>
-    // Form örnek submit (API bağlamadıysanız simülasyon)
-    document.getElementById('kayitForm')?.addEventListener('submit', function(e){
-      e.preventDefault();
-      // TODO: Burada gerçek API'ye POST edebilirsin.
-      document.getElementById('formMsg').classList.remove('hidden');
-      setTimeout(()=>document.getElementById('formMsg').classList.add('hidden'), 3000);
-    });
+<script>
+// ---- NET eşleştirme: sadece backend status alanına bak
+function resolveStage(payload) {
+  const status = String(payload?.status || '').toLowerCase();
 
-    // Parent yüksekliğine haber ver
-    function postHeight(){
-      try{
-        const h = Math.max(
-          document.body.scrollHeight,
-          document.documentElement.scrollHeight
-        );
-      parent.postMessage({ type: 'resize-iframe', height: h }, '*');
+  if (status === 'active')   return { stage: 5, errorAt: null }; // giriş aktif => 5 yeşil
+  if (status === 'pending')  return { stage: 2, errorAt: null }; // inceleme => 2 sarı
+  if (status === 'inactive') return { stage: 4, errorAt: 4 };    // onaylanmadı => 4 kırmızı
 
-      }catch(_){}
+  // bilinmeyen durumda güvenli varsayılan
+  return { stage: 2, errorAt: null };
+}
+
+// Stepper: errorAt === 4 ise 4. adım kırmızı; stage===5 ise 5 tamamen yeşil
+function renderStepper(stage = 2, errorAt = null) {
+  const steps = [
+    { n: 1, label: 'Form Doldurma' },
+    { n: 2, label: 'Operasyon İnceleme' },
+    { n: 3, label: 'Ek Evrak Bekleniyor' },
+    { n: 4, label: 'Onay' },
+    { n: 5, label: 'Giriş Aktif' },
+  ];
+
+  const stateOf = (i) => {
+    if (i === errorAt) return 'error';
+    if (i < stage)      return 'done';
+    if (i === stage)    return (stage === 5 ? 'done' : 'current');
+    return 'todo';
+  };
+
+  const circleCls = (st) =>
+      st === 'error'   ? 'bg-red-500 text-white'
+    : st === 'done'    ? 'bg-green-500 text-white'
+    : st === 'current' ? 'bg-amber-400 text-white'
+    :                    'bg-gray-200 text-gray-600';
+
+  const segCls = (st) =>
+      st === 'error'   ? 'bg-red-500'
+    : st === 'done'    ? 'bg-green-500'
+    : st === 'current' ? 'bg-amber-400'
+    :                    'bg-gray-300';
+
+  let html = '<div class="flex items-center">';
+  steps.forEach((s, idx) => {
+    const st = stateOf(s.n);
+    html += `
+      <div class="flex flex-col items-center">
+        <div class="w-10 h-10 ${circleCls(st)} rounded-full flex items-center justify-center font-bold">${s.n}</div>
+        <div class="mt-2 text-sm text-gray-700 text-center leading-5">
+          ${s.label.replace(' ', '<br>')}
+        </div>
+      </div>
+    `;
+    if (idx < steps.length - 1) {
+      const nextState = stateOf(s.n + 1);
+      html += `<div class="flex-1 h-1 mx-6 ${segCls(nextState)} rounded-full"></div>`;
     }
-    new ResizeObserver(postHeight).observe(document.body);
-    window.addEventListener('load', postHeight);
-  </script>
+  });
+  html += '</div>';
+  document.getElementById('workflow-stepper').innerHTML = html;
+}
+
+// Backend’ten çek ve uygula (sadece status kullan)
+async function loadWorkflow() {
+  try {
+    const tokenMeta = document.querySelector('meta[name="partner-token"]');
+    const urlMeta   = document.querySelector('meta[name="partners-me-url"]');
+    const token = (tokenMeta?.content || '').trim();
+    const url   = (urlMeta?.content   || '/is-ortaklar-paneli/api/partners_me.php').trim();
+
+    const res = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+        ...(token ? { 'Authorization': token.startsWith('Bearer ') ? token : 'Bearer ' + token } : {})
+      }
+    });
+    const data = await res.json();
+    const payload = data?.partner || data;
+
+    const { stage, errorAt } = resolveStage(payload);
+    renderStepper(stage, errorAt);
+  } catch {
+    renderStepper(2, null);
+  }
+}
+
+loadWorkflow();
+</script>
+
+
+
 </body>
 </html>

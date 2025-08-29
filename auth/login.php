@@ -17,14 +17,19 @@ if (!function_exists('url'))        { function url(string $p){ return $p; } }
 if (!function_exists('asset_url'))  { function asset_url(string $p){ return rtrim(BASE,'/').'/assets/'.ltrim($p,'/'); } }
 
 /* ---------- Güvenli redirect ---------- */
-function safe_redirect(string $url,int $code=302):void{
-  if(!headers_sent()){
-   header('Location: /is-ortaklar-paneli/bayi/dashboard', true, 302);
-    session_write_close(); exit;
+function safe_redirect(string $url, int $code = 302): void {
+  // $url göreli geldiyse BASE ile mutlaklaştır
+  $abs = (strpos($url, '/') === 0) ? $url : (rtrim(BASE, '/') . '/' . ltrim($url, '/'));
+
+  if (!headers_sent()) {
+    header('Location: ' . $abs, true, $code);
+    session_write_close();
+    exit;
   }
-  echo '<script>location.href='.json_encode($url).';</script>';
-  echo '<noscript><meta http-equiv="refresh" content="0;url='.htmlspecialchars($url,ENT_QUOTES,'UTF-8').'"></noscript>';
-  session_write_close(); exit;
+  echo '<script>location.href=' . json_encode($abs) . ';</script>';
+  echo '<noscript><meta http-equiv="refresh" content="0;url=' . htmlspecialchars($abs, ENT_QUOTES, 'UTF-8') . '"></noscript>';
+  session_write_close();
+  exit;
 }
 
 /* ---------- HTTP yardımcıları ---------- */
