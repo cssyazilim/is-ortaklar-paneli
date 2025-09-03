@@ -35,7 +35,7 @@ $ROUTES = [
   'teklifler'     => __DIR__ . '/teklifler.php',
   'teklif-olustur'  => 'teklif-olustur.php',   // <-- BUNU EKLE
   'siparislerim'  => __DIR__ . '/siparislerim.php',
-  'faturalar'     => __DIR__ . '/faturalar.php',
+  'hakedis'     => __DIR__ . '/hakedis.php',
 ];
 
 $content_file = $ROUTES[$slug] ?? null;
@@ -92,7 +92,7 @@ function render_partial(string $file): string {
         <a href="/is-ortaklar-paneli/bayi/musterilerim" class="nav-btn px-1 h-full flex items-center text-sm font-medium <?= active('musterilerim');?>">Müşterilerim</a>
         <a href="/is-ortaklar-paneli/bayi/teklifler"    class="nav-btn px-1 h-full flex items-center text-sm font-medium <?= active('teklifler');?>">Teklifler</a>
         <a href="/is-ortaklar-paneli/bayi/siparislerim" class="nav-btn px-1 h-full flex items-center text-sm font-medium <?= active('siparislerim');?>">Siparişlerim</a>
-        <a href="/is-ortaklar-paneli/bayi/faturalar"    class="nav-btn px-1 h-full flex items-center text-sm font-medium <?= active('faturalar');?>">Faturalandırma</a>
+        <a href="/is-ortaklar-paneli/bayi/hakedis"    class="nav-btn px-1 h-full flex items-center text-sm font-medium <?= active('hakedis');?>">Hak Ediş</a>
       </div>
 
    <!-- Kullanıcı Dropdown -->
@@ -133,7 +133,7 @@ function render_partial(string $file): string {
   <a href="/is-ortaklar-paneli/bayi/musterilerim" class="block px-3 py-2 rounded-md text-sm font-medium <?= active('musterilerim');?>">Müşterilerim</a>
   <a href="/is-ortaklar-paneli/bayi/teklifler"    class="block px-3 py-2 rounded-md text-sm font-medium <?= active('teklifler');?>">Teklifler</a>
   <a href="/is-ortaklar-paneli/bayi/siparislerim" class="block px-3 py-2 rounded-md text-sm font-medium <?= active('siparislerim');?>">Siparişlerim</a>
-  <a href="/is-ortaklar-paneli/bayi/faturalar"    class="block px-3 py-2 rounded-md text-sm font-medium <?= active('faturalar');?>">Faturalandırma</a>
+  <a href="/is-ortaklar-paneli/bayi/hakedis"    class="block px-3 py-2 rounded-md text-sm font-medium <?= active('hakedis');?>">Hak Ediş</a>
   
   <!-- Kullanıcı Menü Mobile -->
   <div class="border-t border-gray-200 pt-2 mt-2">

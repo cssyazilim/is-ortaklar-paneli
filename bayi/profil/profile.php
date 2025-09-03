@@ -65,8 +65,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
     <ol class="flex items-center space-x-4">
       <li>
         <div>
-        <a href="/is-ortaklar-paneli/bayi/dashboard" class="text-gray-400 hover:text-gray-500 transition-colors">
-
+          <a href="/is-ortaklar-paneli/bayi/dashboard" class="text-gray-400 hover:text-gray-500 transition-colors">
             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
             </svg>
@@ -85,26 +84,44 @@ if (session_status() === PHP_SESSION_NONE) session_start();
   </nav>
 
   <!-- Kapak -->
-  <div class="bg-white rounded-2xl card-shadow mb-6 overflow-hidden">
-    <div id="cover-gradient" class="bg-gradient-to-r from-orange-600 to-red-600 px-6 py-8">
+  <div class="bg-white rounded-2xl card-shadow mb-6 overflow-hidden" id="cover-wrapper">
+    <!-- SKELETON -->
+    <div id="cover-skeleton" class="px-6 py-8 animate-pulse">
       <div class="flex items-center">
-        <div id="profile-avatar" class="profile-avatar w-20 h-20 rounded-2xl flex items-center justify-center mr-6">
-          <span id="profile-initials" class="text-2xl font-bold text-white">--</span>
-        </div>
-        <div class="text-white">
-          <h1 id="profile-name" class="text-3xl font-bold mb-2">—</h1>
-          <p id="profile-type" class="text-orange-100 text-lg mb-2">—</p>
-          <div class="flex items-center space-x-4">
-            <span id="status-badge" class="status-badge inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-500 text-white pending-glow">—</span>
+        <div class="w-20 h-20 bg-gray-200 rounded-2xl mr-6"></div>
+        <div class="flex-1 space-y-3">
+          <div class="bg-gray-200 rounded" style="width:220px;height:20px"></div>
+          <div class="bg-gray-200 rounded" style="width:140px;height:14px"></div>
+          <div class="flex items-center gap-3">
+            <div class="h-7 w-28 bg-gray-200 rounded-full"></div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- TEMPLATE -->
+    <template id="cover-template">
+      <div id="cover-gradient" class="bg-gradient-to-r from-orange-600 to-red-600 px-6 py-8">
+        <div class="flex items-center">
+          <div id="profile-avatar" class="profile-avatar w-20 h-20 rounded-2xl flex items-center justify-center mr-6">
+            <span id="profile-initials" class="text-2xl font-bold text-white">--</span>
+          </div>
+          <div class="text-white">
+            <h1 id="profile-name" class="text-3xl font-bold mb-2">—</h1>
+            <p id="profile-type" class="text-orange-100 text-lg mb-2">—</p>
+            <div class="flex items-center space-x-4">
+              <span id="status-badge" class="status-badge inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-500 text-white pending-glow">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
   </div>
 
   <!-- Grid -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 items-stretch">
-   <div id="company-card" class="bg-white rounded-2xl card-shadow p-6 info-card flex flex-col h-full">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 items-stretch">
+    <!-- Şirket Bilgileri -->
+    <div id="company-card" class="bg-white rounded-2xl card-shadow p-6 info-card flex flex-col h-full">
       <div class="flex items-center justify-between mb-6">
         <h2 class="text-xl font-bold text-gray-900 flex items-center">
           <svg class="w-6 h-6 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -112,16 +129,81 @@ if (session_status() === PHP_SESSION_NONE) session_start();
           </svg>
           <span id="company-card-title">Şirket Bilgileri</span>
         </h2>
-
         <button id="edit-company-btn" onclick="editCompany()" class="text-blue-600 hover:text-blue-700 transition-colors">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
           </svg>
         </button>
       </div>
-      <div id="company-content" class="space-y-4"></div>
+
+      <!-- SKELETON -->
+      <div id="company-content" class="space-y-4">
+        <div class="p-6 animate-pulse space-y-3">
+          <div class="bg-gray-200 rounded h-3 w-full"></div>
+          <div class="bg-gray-200 rounded h-3 w-5/6"></div>
+          <div class="bg-gray-200 rounded h-3 w-full"></div>
+          <div class="bg-gray-200 rounded h-3 w-4/5"></div>
+          <div class="bg-gray-200 rounded h-3 w-full"></div>
+          <div class="bg-gray-200 rounded h-3 w-3/4"></div>
+        </div>
+      </div>
+
+      <!-- TEMPLATE -->
+      <template id="company-template">
+        <div class="space-y-4">
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div class="flex items-center">
+              <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M5 11h14M7 15h10"></path></svg>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-900">Şirket Adı</p>
+                <p id="company_name" class="text-gray-600">—</p>
+              </div>
+            </div>
+            <span class="status-chip inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700" id="company_legal_type">—</span>
+          </div>
+
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div class="flex items-center">
+              <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-4">
+                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M5 11h14M7 15h10"></path></svg>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-900">Vergi No / Dairesi</p>
+                <p class="text-gray-600"><span id="tax_number">—</span> • <span id="tax_office">—</span></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div class="flex items-center">
+              <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
+                <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5v14"></path></svg>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-900">MERSİS No</p>
+                <p id="mersis_no" class="text-gray-600">—</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div class="flex items-center">
+              <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center mr-4">
+                <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5V9l-2-2-3 3-8-8-7 7v11h5"></path></svg>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-900">Adres</p>
+                <p id="company_address" class="text-gray-600">—</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
     </div>
 
+    <!-- İletişim Bilgileri -->
     <div id="contact-card" class="bg-white rounded-2xl card-shadow p-6 info-card flex flex-col h-full">
       <div class="flex items-center justify-between mb-6">
         <h2 class="text-xl font-bold text-gray-900 flex items-center">
@@ -136,80 +218,187 @@ if (session_status() === PHP_SESSION_NONE) session_start();
           </svg>
         </button>
       </div>
-      <div id="contact-content" class="space-y-4"></div>
+
+      <!-- SKELETON -->
+      <div id="contact-content" class="space-y-4">
+        <div class="p-6 animate-pulse space-y-3">
+          <div class="bg-gray-200 rounded h-3 w-full"></div>
+          <div class="bg-gray-200 rounded h-3 w-11/12"></div>
+          <div class="bg-gray-200 rounded h-3 w-full"></div>
+          <div class="bg-gray-200 rounded h-3 w-5/6"></div>
+          <div class="bg-gray-200 rounded h-3 w-full"></div>
+          <div class="bg-gray-200 rounded h-3 w-4/5"></div>
+        </div>
+      </div>
+
+      <!-- TEMPLATE -->
+      <template id="contact-template">
+        <div class="space-y-4">
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div class="flex items-center">
+              <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-900">İletişim Kişisi</p>
+                <p id="contact_person" class="text-gray-600">—</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div class="flex items-center">
+              <div class="w-10 h-10 bg-sky-100 rounded-lg flex items-center justify-center mr-4">
+                <svg class="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h2l3 7-1 4h11l-1-4 3-7h2"></path></svg>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-900">Telefon</p>
+                <p id="contact_phone" class="text-gray-600">—</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div class="flex items-center">
+              <div class="w-10 h-10 bg-rose-100 rounded-lg flex items-center justify-center mr-4">
+                <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12A4 4 0 118 12a4 4 0 018 0z"></path></svg>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-900">E-posta</p>
+                <p id="contact_email" class="text-gray-600">—</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div class="flex items-center">
+              <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-4">
+                <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-900">Web Sitesi</p>
+                <p id="contact_website" class="text-gray-600">—</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div class="flex items-center">
+              <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center mr-4">
+                <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5V9l-2-2-3 3-8-8-7 7v11h5"></path></svg>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-900">Adres</p>
+                <p id="contact_address" class="text-gray-600">—</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
     </div>
   </div>
 
+  <!-- Güvenlik + Hesap Durumu -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Güvenlik Ayarları -->
     <div class="bg-white rounded-2xl card-shadow p-6 info-card">
-      <div class="flex items-center justify-between mb-6">
-        <h2 class="text-xl font-bold text-gray-900 flex items-center">
-          <svg class="w-6 h-6 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-          </svg>
-          Güvenlik Ayarları
-        </h2>
-        <button onclick="manageSecurity()" class="text-red-600 hover:text-red-700 transition-colors">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-          </svg>
-        </button>
+     <div class="flex items-center justify-between mb-6">
+  <!-- Sol: Kilit + Başlık -->
+  <div class="flex items-center gap-2">
+    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <!-- lock-closed (outline) -->
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M16 10V7a4 4 0 00-8 0v3" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M5 10h14a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2z" />
+    </svg>
+    <h2 class="text-xl font-bold text-gray-900">Güvenlik Ayarları</h2>
+  </div>
+
+  <!-- Sağ: Ayarlar (cog) -->
+  <button type="button" onclick="manageSecurity()"
+          class="p-2 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200"
+          aria-label="Ayarlar">
+  <button onclick="manageSecurity()" class="text-red-600 hover:text-red-700 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                    </button>
+  </button>
+</div>
+
+
+      <!-- SKELETON -->
+      <div id="security-skeleton" class="p-6 animate-pulse space-y-3">
+        <div class="bg-gray-200 rounded h-4 w-1/2"></div>
+        <div class="bg-gray-200 rounded h-3 w-full"></div>
+        <div class="bg-gray-200 rounded h-3 w-5/6"></div>
+        <div class="bg-gray-200 rounded h-3 w-2/3"></div>
       </div>
 
-      <div class="p-4 bg-red-50 rounded-lg border border-red-200">
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center">
-            <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-4">
-              <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-              </svg>
+      <!-- TEMPLATE -->
+      <template id="security-template">
+        <div class="p-4 bg-red-50 rounded-lg border border-red-200">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center">
+              <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-4">
+                <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-900">İki Faktörlü Doğrulama</p>
+                <p id="mfa_text" class="text-red-700 font-medium">Devre Dışı</p>
+              </div>
             </div>
-            <div>
-              <p class="text-sm font-medium text-gray-900">İki Faktörlü Doğrulama</p>
-              <p id="mfa_text" class="text-red-700 font-medium">Devre Dışı</p>
-            </div>
-          </div>
-          <span id="mfa_badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Güvensiz</span>
-        </div>
-
-        <div class="grid gap-4 sm:grid-cols-3 mt-4">
-          <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-gray-700">Yöntem</label>
-            <div class="mt-2 flex items-center gap-6">
-              <label class="inline-flex items-center gap-2">
-                <input type="radio" name="mfa_method" value="sms" class="text-red-600 focus:ring-red-500" checked>
-                <span>SMS</span>
-              </label>
-              <label class="inline-flex items-center gap-2">
-                <input type="radio" name="mfa_method" value="email" class="text-red-600 focus:ring-red-500">
-                <span>E-Mail</span>
-              </label>
-            </div>
+            <span id="mfa_badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Güvensiz</span>
           </div>
 
-          <div class="sm:col-span-1">
-            <label id="mfa_target_label" class="block text-sm font-medium text-gray-700">Telefon</label>
-            <input id="mfa_target" type="tel" inputmode="tel" placeholder="+90 5xx xxx xx xx" class="mt-2 w-full rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500 px-3 py-2 bg-white">
-          </div>
-        </div>
+          <div class="grid gap-4 sm:grid-cols-3 mt-4">
+            <div class="sm:col-span-2">
+              <label class="block text-sm font-medium text-gray-700">Yöntem</label>
+              <div class="mt-2 flex items-center gap-6">
+                <label class="inline-flex items-center gap-2">
+                  <input type="radio" name="mfa_method" value="sms" class="text-red-600 focus:ring-red-500" checked>
+                  <span>SMS</span>
+                </label>
+                <label class="inline-flex items-center gap-2">
+                  <input type="radio" name="mfa_method" value="email" class="text-red-600 focus:ring-red-500">
+                  <span>E-Mail</span>
+                </label>
+              </div>
+            </div>
 
-        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg mt-4">
-          <div class="flex items-center">
-            <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-4">
-              <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-              </svg>
+            <div class="sm:col-span-1">
+              <label id="mfa_target_label" class="block text-sm font-medium text-gray-700">Telefon</label>
+            <input id="mfa_target" 
+       type="tel" 
+       inputmode="tel" 
+       placeholder="+90 5xx xxx xx xx" 
+       class="mt-2 w-full rounded-lg border-gray-300 focus:border-red-500 focus:ring-red-500 px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed"
+       readonly>
             </div>
-            <div class="mt-2">
-              <p class="text-sm font-medium text-gray-900">Hesap ID</p>
-              <p id="account_id" class="text-gray-600 text-xs font-mono">—</p>
+          </div>
+
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg mt-4">
+            <div class="flex items-center">
+              <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-4">
+                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                </svg>
+              </div>
+              <div class="mt-2">
+                <p class="text-sm font-medium text-gray-900">Hesap ID</p>
+                <p id="account_id" class="text-gray-600 text-xs font-mono">—</p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </template>
     </div>
 
+    <!-- Hesap Durumu -->
     <div class="bg-white rounded-2xl card-shadow p-6 info-card">
       <div class="flex items-center justify-between mb-6">
         <h2 class="text-xl font-bold text-gray-900 flex items-center">
@@ -220,22 +409,38 @@ if (session_status() === PHP_SESSION_NONE) session_start();
         </h2>
       </div>
 
-      <div id="status-card" class="p-4 bg-orange-50 rounded-lg border border-orange-200">
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center">
-            <div>
-              <p class="text-sm font-medium text-gray-900">Hesap Durumu</p>
-              <p id="status_text" class="text-orange-700 font-medium">—</p>
-            </div>
+      <!-- SKELETON -->
+      <div id="status-card" class="p-6 animate-pulse space-y-4">
+        <div class="bg-gray-200 rounded h-4 w-2/5"></div>
+        <div class="flex items-center justify-between">
+          <div class="space-y-2">
+            <div class="bg-gray-200 rounded h-3 w-40"></div>
+            <div class="bg-gray-200 rounded h-3 w-32"></div>
           </div>
-          <span id="status-chip" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-            Pending
-          </span>
+          <div class="h-6 w-24 bg-gray-200 rounded-full"></div>
         </div>
-        <p id="status-desc" class="text-sm text-orange-600">
-          Hesabınız yönetici onayı beklemektedir. Onaylandıktan sonra tüm özelliklere erişebileceksiniz.
-        </p>
+        <div class="bg-gray-200 rounded h-2 w-full"></div>
       </div>
+
+      <!-- TEMPLATE -->
+      <template id="status-template">
+        <div id="status-card" class="p-4 bg-orange-50 rounded-lg border border-orange-200">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center">
+              <div>
+                <p class="text-sm font-medium text-gray-900">Hesap Durumu</p>
+                <p id="status_text" class="text-orange-700 font-medium">—</p>
+              </div>
+            </div>
+            <span id="status-chip" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+              Pending
+            </span>
+          </div>
+          <p id="status-desc" class="text-sm text-orange-600">
+            Hesabınız yönetici onayı beklemektedir. Onaylandıktan sonra tüm özelliklere erişebileceksiniz.
+          </p>
+        </div>
+      </template>
 
       <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
         <div class="flex items-center">
@@ -264,12 +469,23 @@ if (session_status() === PHP_SESSION_NONE) session_start();
           </div>
         </div>
       </div>
-
     </div>
   </div>
 </main>
 
-<!-- Tüm JS dışarıda -->
-<script src="/is-ortaklar-paneli/assets/js/profile.js"></script>
+<!-- JS -->
+<script src="/is-ortaklar-paneli/assets/js/profile.js?v=<?=time()?>" defer></script>
+
+<!-- İsteğe bağlı: profil.js içinde çağırman için küçük yardımcı -->
+<script defer>
+  window.replaceSkeleton = function(skelId, tplId) {
+    const skel = document.getElementById(skelId);
+    const tpl  = document.getElementById(tplId);
+    if (skel && tpl) {
+      skel.replaceWith(tpl.content.cloneNode(true));
+    }
+  };
+</script>
+
 </body>
 </html>

@@ -170,7 +170,7 @@ if (!$token) {
       <div class="flex justify-between items-center">
         <h3 class="text-lg font-semibold text-gray-900">Teklif İşlemleri</h3>
         <button type="button" onclick="createNewQuote()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg">
-          Yeni Teklif Oluştur
+          Teklif Talebi Oluştur
         </button>
       </div>
     </div>
@@ -218,7 +218,7 @@ if (!$token) {
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                      <button onclick="sendQuoteToCustomer('<?= htmlspecialchars($r['id'], ENT_QUOTES, 'UTF-8') ?>')" class="text-indigo-600 hover:text-indigo-900">Müşteriye Gönder</button>
+                      <button onclick="sendQuoteToCustomer('<?= htmlspecialchars($r['id'], ENT_QUOTES, 'UTF-8') ?>')" class="text-indigo-600 hover:text-indigo-900">Gönder</button>
                       <button onclick="editQuote('<?= htmlspecialchars($r['id'], ENT_QUOTES, 'UTF-8') ?>')" class="text-gray-600 hover:text-gray-900">Düzenle</button>
                       <button onclick="viewQuote('<?= htmlspecialchars($r['id'], ENT_QUOTES, 'UTF-8') ?>')" class="text-gray-600 hover:text-gray-900">Görüntüle</button>
                     </div>

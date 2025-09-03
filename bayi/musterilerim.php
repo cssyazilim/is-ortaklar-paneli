@@ -61,9 +61,25 @@ if (!function_exists('partner_bearer')) {
 
 if (!function_exists('pick')) {
   function pick(array $arr, array $keys, $fallback=null){
-    foreach ($keys as $k) if (array_key_exists($k, $arr) && $arr[$k] !== '') return $arr[$k];
+    foreach ($keys as $k) {
+      if (array_key_exists($k, $arr)) {
+        $v = $arr[$k];
+        // null, boş string ve sadece whitespace'leri boş say
+        if ($v !== null) {
+          if (is_string($v)) { $v = trim($v); }
+          if ($v !== '') return $v;
+        }
+      }
+    }
     return $fallback;
   }
+}
+
+/* "null" yazmak yerine uzun tire göster */
+function dash($v){
+  if ($v === null) return '—';
+  if (is_string($v) && trim($v)==='') return '—';
+  return $v;
 }
 
 /* null ise kelime olarak "null" döndür */
@@ -175,6 +191,12 @@ foreach ($items as $it){
 
   <script>
   const customers = <?php echo json_encode($customers, JSON_UNESCAPED_UNICODE); ?>;
+
+   /* === API ve Yetki (detay çekmek için) === */
+  const API_CUSTOMERS_URL = <?php echo json_encode(API_CUSTOMERS, JSON_UNESCAPED_SLASHES); ?>;
+  const AUTH_BEARER       = <?php echo json_encode(partner_bearer()); ?>;
+  window.__currentCustomerId = null;
+
   let filteredCustomers = [...customers];
 
   function initializePage(){ renderCustomers(); updateCustomerCount(); postHeight(); }
@@ -252,7 +274,7 @@ foreach ($items as $it){
           </div>
 
           <div class="text-xs text-gray-500">
-            <span class="mr-3"><strong>Program:</strong> ${c.program}</span>
+
             <span class="mr-3"><strong>Kullanıcı:</strong> ${c.userCount}</span>
           </div>
         </div>
@@ -280,7 +302,74 @@ foreach ($items as $it){
   }
   function filterByStatus(){ searchCustomers(); }
   function updateCustomerCount(){ document.getElementById('customerCount').textContent = `${filteredCustomers.length} müşteri`; }
-  function viewCustomer(id){ alert(`Müşteri detayı açılacak (id: ${id||'-'})`); }
+  async function viewCustomer(id){
+    openCustomerModal();
+    modalLoading();
+     window.__currentCustomerId = id; // <— eklendi
+    try{
+      const res = await fetch(`${API_CUSTOMERS_URL}/${encodeURIComponent(id)}`, {
+        headers: { 'Accept': 'application/json', 'Authorization': AUTH_BEARER }
+      });
+      if(!res.ok){
+        const tx = await res.text().catch(()=> ''); 
+        throw new Error(`Detay yüklenemedi (HTTP ${res.status}) ${tx||''}`);
+      }
+      const data = await res.json();
+      renderCustomerModal(data);
+      postHeight();
+    }catch(err){
+      document.getElementById('customerModalBody').innerHTML =
+        `<div class="p-8 text-center">
+           <div class="text-rose-600 font-semibold mb-2">Hata</div>
+           <div class="text-gray-600 mb-4">${esc(err.message)}</div>
+           <button class="px-4 py-2 rounded-lg bg-gray-800 text-white" onclick="closeCustomerModal()">Kapat</button>
+         </div>`;
+      postHeight();
+    }
+  }
+
+  function editCustomer(){
+  const id = window.__currentCustomerId;
+  if(!id) return;
+  const url = '/is-ortaklar-paneli/bayi/musteriKayit.php?id=' + encodeURIComponent(id);
+  if (window.top && window.top !== window.self) {
+    window.top.location.href = url; // iframe içindeyse üstte aç
+  } else {
+    window.location.href = url;
+  }
+}
+
+function removeCustomerFromLists(id){
+  const rm = (arr)=> {
+    const i = arr.findIndex(x => String(x.id) === String(id));
+    if (i >= 0) arr.splice(i,1);
+  };
+  rm(customers); rm(filteredCustomers);
+  renderCustomers(); updateCustomerCount();
+}
+
+async function deleteCustomer(){
+  const id = window.__currentCustomerId;
+  if(!id) return;
+  if(!confirm('Bu müşteriyi silmek istediğinize emin misiniz?')) return;
+
+  try{
+    const res = await fetch(`${API_CUSTOMERS_URL}/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: { 'Accept': 'application/json', 'Authorization': AUTH_BEARER }
+    });
+    if(!res.ok){
+      const txt = await res.text().catch(()=> '');
+      throw new Error(`Silinemedi (HTTP ${res.status}) ${txt||''}`);
+    }
+    alert('Müşteri silindi.');
+    closeCustomerModal();
+    removeCustomerFromLists(id);
+  }catch(err){
+    alert('Hata: ' + (err?.message || 'Silme işlemi başarısız.'));
+  }
+}
+
 
   // Parent yüksekliği
   function postHeight(){
@@ -369,6 +458,203 @@ foreach ($items as $it){
       setTimeout(() => { area.classList.add('hidden'); postHeight(); }, 300);
     }, 50);
   }
+
+    /* ====== Modal Helpers ====== */
+  function esc(s){ return String(s ?? '—')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function pick(o, keys, fb='—'){ for(const k of keys){ const v=o?.[k]; if(v!==undefined && v!==null && v!=='') return v; } return fb; }
+  function fmtMoney(n){ if(n===null||n===undefined||n==='') return '—'; const x=Number(n); if(Number.isNaN(x)) return esc(n); return x.toLocaleString('tr-TR',{maximumFractionDigits:2})+' TL'; }
+  function fmtDateTime(iso){ if(!iso) return '—'; const d=new Date(iso); return isNaN(d)?'—':d.toLocaleString('tr-TR'); }
+  function riskBadge(level){
+    const l=String(level||'').toLowerCase();
+    if(['low','düşük','dusuk'].includes(l))   return '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">Düşük</span>';
+    if(['medium','orta'].includes(l))         return '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200">Orta</span>';
+    if(['high','yüksek','yuksek'].includes(l))return '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700 border border-rose-200">Yüksek</span>';
+    return '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">—</span>';
+  }
+  function typeTr(t){
+    const s=String(t||'').toLowerCase();
+    if(['corporate','company','kurumsal'].includes(s)) return 'Kurumsal';
+    if(['individual','bireysel','personal'].includes(s)) return 'Bireysel';
+    return t || '—';
+  }
+
+  function openCustomerModal(){ 
+    const m=document.getElementById('customerModal'); 
+    m.classList.remove('hidden'); 
+    postHeight();
+  }
+  function closeCustomerModal(){ 
+    const m=document.getElementById('customerModal'); 
+    m.classList.add('hidden'); 
+    postHeight();
+  }
+  function modalLoading(){
+    const body=document.getElementById('customerModalBody');
+    body.innerHTML = `
+      <div class="p-6">
+        <div class="animate-pulse space-y-4">
+          <div class="h-5 w-40 bg-gray-200 rounded"></div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="h-40 bg-gray-200 rounded"></div>
+            <div class="h-40 bg-gray-200 rounded"></div>
+            <div class="h-40 bg-gray-200 rounded"></div>
+            <div class="h-40 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+      </div>`;
+  }
+  function renderCustomerModal(detail){
+    const d = detail?.data || detail || {};
+    const model = {
+      name:       pick(d,['display_name','name','full_name','company_name','title'],'—'),
+      company:    pick(d,['company','company_name','title'],'—'),
+      taxNo:      pick(d,['tax_number','tax_no','vkn','vergi_no'],'—'),
+      id:         pick(d,['id','customer_id','code'],'—'),
+      type:       typeTr(pick(d,['type','customer_type'],'—')),
+      status:     (d.status||'pending'),
+      email:      pick(d,['email'],'—'),
+      phone:      pick(d,['phone'],'—'),
+      website:    pick(d,['website','web','url'],'—'),
+      contact:    pick(d,['contact_person','authorized','authorized_person','contact_name'],'—'),
+      address:    (typeof d.address==='object' ? pick(d.address,['line1','street'],'—') : pick(d,['address'],'—')),
+      district:   pick(d,['district','ilce'],'—'),
+      city:       pick(d,['city','il','province'],'—'),
+      postal:     pick(d,['postal_code','posta_kodu'],'—'),
+      credit:     pick(d,['credit_limit','limit'],null),
+      balance:    pick(d,['balance','current_balance'],null),
+      risk:       pick(d,['risk','risk_level'],''),
+      created_at: pick(d,['created_at','createdAt'],''),
+      last_tx:    pick(d,['last_transaction_at','last_action_at','updated_at'],''),
+      notes:      pick(d,['notes','note','description','remark'],'')
+    };
+
+    const body=document.getElementById('customerModalBody');
+    body.innerHTML = `
+      <div class="p-4 sm:p-6">
+        <div class="mb-4 sm:mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+              <span class="text-blue-600 font-semibold">${esc((model.name||'').slice(0,2).toUpperCase())}</span>
+            </div>
+            <div>
+              <div class="text-lg font-semibold text-gray-900">${esc(model.company||model.name)}</div>
+              <div class="text-sm text-gray-500">Müşteri ID: ${esc(model.id)}</div>
+            </div>
+          </div>
+        </div>
+
+       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+  <!-- Temel Bilgiler -->
+  <div class="rounded-2xl ring-1 ring-gray-100 card-shadow h-full">
+    <div class="px-5 py-3 border-b">
+      <div class="font-semibold">Temel Bilgiler</div>
+    </div>
+    <div class="px-5 py-4 grid grid-cols-2 gap-3 text-sm">
+      <div class="col-span-2">
+        <div class="text-gray-500">Şirket Adı</div>
+        <div class="font-medium">${esc(model.company)}</div>
+      </div>
+      <div>
+        <div class="text-gray-500">Vergi Numarası</div>
+        <div class="font-medium">${esc(model.taxNo)}</div>
+      </div>
+      <div>
+        <div class="text-gray-500">Müşteri Tipi</div>
+        <div>
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 border border-indigo-200">${esc(model.type)}</span>
+        </div>
+      </div>
+      <div>
+        <div class="text-gray-500">Durum</div>
+        <div><span class="${statusPillClass(model.status)}">${getStatusText(model.status)}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- İletişim Bilgileri -->
+  <div class="rounded-2xl ring-1 ring-gray-100 card-shadow h-full">
+    <div class="px-5 py-3 border-b">
+      <div class="font-semibold">İletişim Bilgileri</div>
+    </div>
+    <div class="px-5 py-4 space-y-2 text-sm">
+      <div class="flex items-center gap-2"><span class="text-gray-500 w-28">Telefon</span><a class="text-blue-600 hover:underline" href="tel:${esc(model.phone)}">${esc(model.phone)}</a></div>
+      <div class="flex items-center gap-2"><span class="text-gray-500 w-28">E-posta</span><a class="text-blue-600 hover:underline" href="mailto:${esc(model.email)}">${esc(model.email)}</a></div>
+      <div class="flex items-center gap-2"><span class="text-gray-500 w-28">Yetkili Kişi</span><span class="font-medium">${esc(model.name)}</span></div>
+    </div>
+  </div>
+
+  <!-- Ek Bilgiler (sol altta) -->
+  <div class="rounded-2xl ring-1 ring-gray-100 card-shadow h-full">
+    <div class="px-5 py-3 border-b"><div class="font-semibold">Ek Bilgiler</div></div>
+    <div class="px-5 py-4 text-sm space-y-2">
+      <div class="flex items-center gap-2"><span class="text-gray-500 w-36">Kayıt Tarihi</span><span class="font-medium">${esc(fmtDateTime(model.created_at))}</span></div>
+      <div class="flex items-center gap-2"><span class="text-gray-500 w-36">Son İşlem Tarihi</span><span class="font-medium">${esc(fmtDateTime(model.last_tx))}</span></div>
+      
+    </div>
+  </div>
+
+  <!-- Adres Bilgileri (sağ altta) -->
+  <div class="rounded-2xl ring-1 ring-gray-100 card-shadow h-full lg:col-start-2">
+    <div class="px-5 py-3 border-b"><div class="font-semibold">Adres Bilgileri</div></div>
+    <div class="px-5 py-4 text-sm space-y-2">
+      <div><span class="text-gray-500 block">Adres</span><div class="font-medium">${esc(model.address)}</div></div>
+    </div>
+  </div>
+</div>`;
+  }
+ document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeCustomerModal(); });
+
   </script>
+
+  <!-- ===== Modal: Müşteri Detayları ===== -->
+<div id="customerModal" class="fixed inset-0 z-[1000] hidden overflow-y-auto overscroll-contain" role="dialog" aria-modal="true">
+
+  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeCustomerModal()"></div>
+
+  <div class="relative mx-auto my-6 sm:my-12 w-[92%] max-w-5xl">
+<div class="bg-white rounded-2xl shadow-xl ring-1 ring-black/5 overflow-hidden max-h-[90vh] flex flex-col">
+
+     <div class="flex items-center justify-between px-5 py-3 border-b">
+  <div class="flex items-center gap-2">
+    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M5.121 17.804A13.937 13.937 0 0112 15c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z"/>
+    </svg>
+    <div class="font-semibold">Müşteri Detayları</div>
+  </div>
+
+  <div class="flex items-center gap-1">
+    <!-- Düzenle -->
+    <button class="rounded-lg p-2 hover:bg-gray-100" onclick="editCustomer()" title="Düzenle">
+      <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M16.5 3.75a2.121 2.121 0 013 3L7.5 18.75l-4 1 1-4L16.5 3.75z"/>
+      </svg>
+    </button>
+
+    <!-- Sil -->
+    <button class="rounded-lg p-2 hover:bg-rose-50" onclick="deleteCustomer()" title="Sil">
+      <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 7l-1 12a2 2 0 01-2 2H8a2 2 0 01-2-2L5 7m3-3h8m-7 0l1-1h4l1 1M10 11v6m4-6v6"/>
+      </svg>
+    </button>
+
+    <!-- Kapat -->
+    <button class="rounded-lg p-2 hover:bg-gray-100" onclick="closeCustomerModal()" aria-label="Kapat">
+      <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+</div>
+<div id="customerModalBody" class="min-h-[200px] flex-1 overflow-y-auto"></div>
+
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
